@@ -1,52 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Quét Serial Soundbox</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scan Serial</title>
   <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    body { font-family: Arial; padding: 16px }
-    #reader { width: 100%; max-width: 400px }
-  </style>
 </head>
-<body>
 
-<h3>Quét serial</h3>
+<body style="font-family: Arial; padding: 10px">
 
-<div id="reader"></div>
+<h3>Quét Serial Soundbox</h3>
 
-<br>
-<input id="serial" placeholder="Serial sẽ tự điền" readonly>
-<br><br>
-<button onclick="submitData()">Gửi</button>
+<input id="serial" placeholder="Serial sẽ tự điền" style="width:100%;font-size:16px"><br><br>
+
+<button onclick="startScan()" style="font-size:16px">📷 Quét mã vạch</button>
+<button onclick="submitData()" style="font-size:16px">📤 Gửi</button>
+
+<div id="reader" style="width:100%;margin-top:10px"></div>
 
 <script>
-const reader = new Html5Qrcode("reader");
+let scanner;
 
-reader.start(
-  { facingMode: "environment" },   // camera sau
-  {
-    fps: 10,
-    qrbox: 250
-  },
-  (text) => {
-    document.getElementById("serial").value = text;
-    reader.stop();
-  }
-);
+function startScan() {
+  document.getElementById("reader").innerHTML = "";
+
+  scanner = new Html5Qrcode("reader");
+
+  scanner.start(
+    { facingMode: "environment" },
+    {
+      fps: 10,
+      qrbox: { width: 250, height: 100 },
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E
+      ]
+    },
+    (text) => {
+      document.getElementById("serial").value = text;
+      scanner.stop();
+    },
+    (err) => {}
+  );
+}
 
 function submitData() {
-  const serial = document.getElementById("serial").value;
-  if (!serial) {
-    alert("Chưa có serial");
-    return;
-  }
-
   fetch("https://script.google.com/macros/library/d/1YD8S38iGxJDLRnwIdjpIq4L-sgj-C0ySmMYpz_iuJN_VNC0r6qeuQ4ud/1", {
     method: "POST",
-    body: JSON.stringify({ serial })
+    body: JSON.stringify({
+      serial: document.getElementById("serial").value
+    })
   })
-  .then(() => alert("Đã lưu"))
+  .then(() => alert("Đã lưu"));
 }
 </script>
 
