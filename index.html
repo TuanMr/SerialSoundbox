@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Nhập Serial Soundbox</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+
+<body>
+  <h3>Quét Serial Soundbox</h3>
+
+  <input id="serial" placeholder="Serial" readonly>
+  <br><br>
+
+  <button onclick="startScan()">📷 Quét mã vạch</button>
+  <br><br>
+
+  <input id="name" placeholder="Tên khách hàng">
+  <br><br>
+
+  <input id="phone" placeholder="Số điện thoại">
+  <br><br>
+
+  <button onclick="submitForm()">Gửi</button>
+
+  <div id="reader" style="width:300px"></div>
+
+<script>
+let html5QrCode;
+
+function startScan() {
+  html5QrCode = new Html5Qrcode("reader");
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 250 },
+    (decodedText) => {
+      document.getElementById("serial").value = decodedText;
+      html5QrCode.stop();
+    }
+  );
+}
+
+function submitForm() {
+  fetch("https://script.google.com/macros/s/AKfycbweOqbcAceKzXhFa9cZ5YNR0GwnOBKvQpKryMx6X9f9K2ynkwePKXt_PikR8Hn4qhD00g/exec", {
+    method: "POST",
+    body: JSON.stringify({
+      serial: document.getElementById("serial").value,
+      name: document.getElementById("name").value,
+      phone: document.getElementById("phone").value
+    })
+  })
+  .then(r => r.json())
+  .then(() => alert("Đã lưu thành công"));
+}
+</script>
+</body>
+</html>
