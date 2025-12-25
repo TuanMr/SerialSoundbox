@@ -1,61 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Scan Serial</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <meta charset="UTF-8" />
+  <title>ESP32 Web Flasher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
+<body>
+  <h2>Nạp Firmware ESP32 (.bin)</h2>
 
-<body style="font-family: Arial; padding: 10px">
+  <input type="file" id="firmware" accept=".bin" />
+  <br><br>
 
-<h3>Quét Serial Soundbox</h3>
+  <button id="connect">🔌 Kết nối ESP32</button>
+  <button id="flash" disabled>⚡ Nạp Firmware</button>
 
-<input id="serial" placeholder="Serial sẽ tự điền" style="width:100%;font-size:16px"><br><br>
+  <pre id="log"></pre>
 
-<button onclick="startScan()" style="font-size:16px">📷 Quét mã vạch</button>
-<button onclick="submitData()" style="font-size:16px">📤 Gửi</button>
-
-<div id="reader" style="width:100%;margin-top:10px"></div>
-
-<script>
-let scanner;
-
-function startScan() {
-  document.getElementById("reader").innerHTML = "";
-
-  scanner = new Html5Qrcode("reader");
-
-  scanner.start(
-    { facingMode: "environment" },
-    {
-      fps: 10,
-      qrbox: { width: 250, height: 100 },
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E
-      ]
-    },
-    (text) => {
-      document.getElementById("serial").value = text;
-      scanner.stop();
-    },
-    (err) => {}
-  );
-}
-
-function submitData() {
-  fetch("https://script.google.com/macros/library/d/1YD8S38iGxJDLRnwIdjpIq4L-sgj-C0ySmMYpz_iuJN_VNC0r6qeuQ4ud/1", {
-    method: "POST",
-    body: JSON.stringify({
-      serial: document.getElementById("serial").value
-    })
-  })
-  .then(() => alert("Đã lưu"));
-}
-</script>
-
+  <script src="https://unpkg.com/esptool-js@0.4.6/dist/web/index.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
