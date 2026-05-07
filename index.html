@@ -112,6 +112,14 @@ textarea{
     display:none;
 }
 
+#status{
+    margin-top:10px;
+    text-align:center;
+    font-size:16px;
+    font-weight:bold;
+    color:#333;
+}
+
 </style>
 </head>
 
@@ -138,6 +146,8 @@ Tổng scan:
 QR ĐÃ TỒN TẠI
 </div>
 
+<div id="status"></div>
+
 <button class="start"
 onclick="startScanner()">
 Start Scanner
@@ -163,14 +173,15 @@ onclick="clearList()">
 Clear List
 </button>
 
-<textarea id="resultList"></textarea>
+<textarea id="resultList"
+placeholder="Danh sách mã scan..."></textarea>
 
 </div>
 
 <script>
 
 const GOOGLE_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbwPQ5QZFUS8vmcU-ax3YFtFU0VhheBZr4ScohV-ms63_SxvNRoueHUieZzl85DeU02ZgA/exec";
+"https://script.google.com/macros/s/AKfycbzStETLOoc2dfZhU33SWJ3DKO0YBfPBKq7WEJu5_YobczeDQGXkuFSJsbxFeBCJVzJY3A/exec";
 
 let scannedList = [];
 
@@ -279,7 +290,9 @@ async function startScanner(){
 
     }catch(err){
 
-        alert(err);
+        alert(
+            "Lỗi camera:\n" + err
+        );
     }
 }
 
@@ -320,9 +333,11 @@ function clearList(){
     document.getElementById(
         "count"
     ).innerText = 0;
+
+    setStatus("");
 }
 
-function sendToSheet(){
+async function sendToSheet(){
 
     if(scannedList.length === 0){
 
@@ -333,27 +348,30 @@ function sendToSheet(){
 
     try{
 
+        setStatus(
+            "Đang gửi dữ liệu..."
+        );
+
         for(let code of scannedList){
 
-            const payload =
-                JSON.stringify({
-                    code:code
-                });
+            const url =
+                GOOGLE_SCRIPT_URL +
+                "?code=" +
+                encodeURIComponent(code);
 
-            const blob =
-                new Blob(
-                    [payload],
-                    {
-                        type:
-                        "text/plain"
-                    }
-                );
-
-            navigator.sendBeacon(
-                GOOGLE_SCRIPT_URL,
-                blob
+            await fetch(
+                url,
+                {
+                    method:"GET",
+                    mode:"no-cors",
+                    cache:"no-cache"
+                }
             );
         }
+
+        setStatus(
+            "Đã gửi Google Sheet"
+        );
 
         alert(
             "Đã gửi Google Sheet"
@@ -363,10 +381,21 @@ function sendToSheet(){
 
         console.error(err);
 
+        setStatus(
+            "Lỗi gửi dữ liệu"
+        );
+
         alert(
             "Lỗi gửi dữ liệu"
         );
     }
+}
+
+function setStatus(text){
+
+    document.getElementById(
+        "status"
+    ).innerText = text;
 }
 
 function showDuplicateWarning(){
