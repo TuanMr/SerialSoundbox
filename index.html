@@ -1,22 +1,233 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <title>ESP32 Web Flasher</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>QR & Barcode Scanner</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    background:#f5f5f5;
+    padding:15px;
+    margin:0;
+}
+
+.container{
+    max-width:600px;
+    margin:auto;
+}
+
+h2{
+    text-align:center;
+    margin-bottom:15px;
+}
+
+#reader{
+    width:100%;
+    border-radius:12px;
+    overflow:hidden;
+    background:white;
+}
+
+button{
+    width:100%;
+    padding:15px;
+    margin-top:10px;
+    border:none;
+    border-radius:12px;
+    font-size:16px;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.start{
+    background:#28a745;
+    color:white;
+}
+
+.stop{
+    background:#ff9800;
+    color:white;
+}
+
+.copy{
+    background:#007bff;
+    color:white;
+}
+
+.clear{
+    background:#dc3545;
+    color:white;
+}
+
+textarea{
+    width:100%;
+    height:250px;
+    margin-top:15px;
+    padding:10px;
+    font-size:16px;
+    border-radius:12px;
+    box-sizing:border-box;
+}
+
+.info{
+    margin-top:10px;
+    text-align:center;
+    color:#666;
+    font-size:14px;
+}
+
+</style>
 </head>
+
 <body>
-  <h2>Nạp Firmware ESP32 (.bin)</h2>
 
-  <input type="file" id="firmware" accept=".bin" />
-  <br><br>
+<div class="container">
 
-  <button id="connect">🔌 Kết nối ESP32</button>
-  <button id="flash" disabled>⚡ Nạp Firmware</button>
+<h2>QR & Barcode Scanner</h2>
 
-  <pre id="log"></pre>
+<div id="reader"></div>
 
-  <script src="https://unpkg.com/esptool-js@0.4.6/dist/web/index.js"></script>
-  <script src="main.js"></script>
+<button class="start" onclick="startScanner()">
+Start Scanner
+</button>
+
+<button class="stop" onclick="stopScanner()">
+Stop Scanner
+</button>
+
+<button class="copy" onclick="copyList()">
+Copy List
+</button>
+
+<button class="clear" onclick="clearList()">
+Clear List
+</button>
+
+<textarea id="resultList" placeholder="Danh sách mã sẽ hiện ở đây..."></textarea>
+
+<div class="info">
+Hỗ trợ QR Code + Barcode
+</div>
+
+</div>
+
+<script>
+
+let scannedList = [];
+let html5QrCode = null;
+let scannerRunning = false;
+
+async function startScanner(){
+
+    if(scannerRunning){
+        return;
+    }
+
+    try{
+
+        html5QrCode = new Html5Qrcode("reader");
+
+        const cameras = await Html5Qrcode.getCameras();
+
+        if(cameras.length === 0){
+            alert("Không tìm thấy camera");
+            return;
+        }
+
+        let cameraId = cameras[0].id;
+
+        if(cameras.length > 1){
+
+            let backCamera = cameras.find(cam =>
+                cam.label.toLowerCase().includes("back") ||
+                cam.label.toLowerCase().includes("rear")
+            );
+
+            if(backCamera){
+                cameraId = backCamera.id;
+            }
+        }
+
+        await html5QrCode.start(
+            cameraId,
+            {
+                fps: 10,
+                qrbox: {
+                    width: 250,
+                    height: 250
+                }
+            },
+
+            (decodedText) => {
+
+                if(!scannedList.includes(decodedText)){
+
+                    scannedList.push(decodedText);
+
+                    document.getElementById("resultList").value =
+                        scannedList.join("\n");
+
+                    navigator.vibrate?.(100);
+
+                    console.log("Scanned:", decodedText);
+                }
+            },
+
+            (errorMessage) => {
+            }
+        );
+
+        scannerRunning = true;
+
+    }catch(err){
+
+        console.error(err);
+
+        alert("Không mở được camera:\n" + err);
+    }
+}
+
+async function stopScanner(){
+
+    if(html5QrCode && scannerRunning){
+
+        await html5QrCode.stop();
+
+        await html5QrCode.clear();
+
+        scannerRunning = false;
+
+        console.log("Scanner stopped");
+    }
+}
+
+function copyList(){
+
+    const textarea = document.getElementById("resultList");
+
+    textarea.select();
+
+    textarea.setSelectionRange(0, 99999);
+
+    document.execCommand("copy");
+
+    alert("Đã copy danh sách");
+}
+
+function clearList(){
+
+    scannedList = [];
+
+    document.getElementById("resultList").value = "";
+}
+
+</script>
+
 </body>
 </html>
