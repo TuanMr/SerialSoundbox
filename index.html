@@ -6,7 +6,7 @@
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0">
 
-<title>QR & Barcode Scanner</title>
+<title>QR Scanner PRO</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -24,14 +24,8 @@ body{
     margin:auto;
 }
 
-h2{
-    text-align:center;
-    margin-bottom:15px;
-}
-
 #reader-wrapper{
     position:relative;
-    width:100%;
 }
 
 #reader{
@@ -46,24 +40,11 @@ h2{
     position:absolute;
     width:80px;
     height:80px;
-    border:3px solid #ffd400;
+    border:3px solid yellow;
     border-radius:12px;
     display:none;
     pointer-events:none;
     transform:translate(-50%, -50%);
-    animation:focusAnim 0.5s ease;
-}
-
-@keyframes focusAnim{
-    0%{
-        transform:translate(-50%, -50%) scale(1.4);
-        opacity:0;
-    }
-
-    100%{
-        transform:translate(-50%, -50%) scale(1);
-        opacity:1;
-    }
 }
 
 button{
@@ -76,41 +57,29 @@ button{
     font-weight:bold;
 }
 
-.start{
-    background:#28a745;
-    color:white;
-}
-
-.stop{
-    background:#ff9800;
-    color:white;
-}
-
-.copy{
-    background:#007bff;
-    color:white;
-}
-
-.clear{
-    background:#dc3545;
-    color:white;
-}
+.start{background:#28a745;color:white;}
+.stop{background:#ff9800;color:white;}
+.copy{background:#007bff;color:white;}
+.clear{background:#dc3545;color:white;}
+.sheet{background:#673ab7;color:white;}
 
 textarea{
     width:100%;
     height:220px;
     margin-top:15px;
     padding:10px;
-    box-sizing:border-box;
     border-radius:12px;
+    box-sizing:border-box;
     font-size:16px;
 }
 
-.info{
+#warning{
     margin-top:10px;
     text-align:center;
-    color:#666;
-    font-size:14px;
+    font-size:18px;
+    font-weight:bold;
+    color:red;
+    display:none;
 }
 
 .scan-count{
@@ -127,7 +96,7 @@ textarea{
 
 <div class="container">
 
-<h2>QR & Barcode Scanner</h2>
+<h2>QR Scanner PRO</h2>
 
 <div id="reader-wrapper">
 
@@ -138,7 +107,12 @@ textarea{
 </div>
 
 <div class="scan-count">
-Tổng scan: <span id="count">0</span>
+Tổng scan:
+<span id="count">0</span>
+</div>
+
+<div id="warning">
+QR ĐÃ TỒN TẠI
 </div>
 
 <button class="start" onclick="startScanner()">
@@ -149,6 +123,10 @@ Start Scanner
 Stop Scanner
 </button>
 
+<button class="sheet" onclick="sendToSheet()">
+Send to Google Sheet
+</button>
+
 <button class="copy" onclick="copyList()">
 Copy List
 </button>
@@ -157,16 +135,14 @@ Copy List
 Clear List
 </button>
 
-<textarea id="resultList"
-placeholder="Danh sách mã sẽ hiện ở đây..."></textarea>
-
-<div class="info">
-Chạm vào màn hình camera để focus QR
-</div>
+<textarea id="resultList"></textarea>
 
 </div>
 
 <script>
+
+const GOOGLE_SCRIPT_URL =
+"https://script.google.com/macros/s/AKfycbydO390jfDVn0xXT17hoxxX8dZcs5oSVY7WVsq1LOUjF33Z8GUrNTFjeUTfrMN75mLB/exec";
 
 let scannedList = [];
 let html5QrCode = null;
@@ -180,93 +156,84 @@ async function startScanner(){
 
     try{
 
-        html5QrCode = new Html5Qrcode("reader");
+        html5QrCode =
+            new Html5Qrcode("reader");
 
         await html5QrCode.start(
 
             {
-                facingMode: {
-                    exact: "environment"
+                facingMode:{
+                    exact:"environment"
                 }
             },
 
             {
-                fps: 20,
+                fps:20,
 
-                qrbox: function(viewfinderWidth, viewfinderHeight){
-
-                    let minEdge =
-                        Math.min(viewfinderWidth,
-                        viewfinderHeight);
+                qrbox:function(w,h){
 
                     let size =
-                        Math.floor(minEdge * 0.75);
+                        Math.floor(
+                            Math.min(w,h)*0.75
+                        );
 
-                    return {
-                        width: size,
-                        height: size
+                    return{
+                        width:size,
+                        height:size
                     };
                 },
 
-                aspectRatio: 1.777778,
-
-                disableFlip: false,
-
-                videoConstraints: {
-
-                    facingMode: {
-                        exact: "environment"
+                videoConstraints:{
+                    facingMode:{
+                        exact:"environment"
                     },
 
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
+                    width:{ideal:1920},
+                    height:{ideal:1080},
 
-                    advanced: [
+                    advanced:[
                         {
-                            focusMode: "continuous"
+                            focusMode:"continuous"
                         },
                         {
-                            zoom: 1.5
+                            zoom:1.5
                         }
                     ]
                 },
 
-                experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true
-                },
-
-                rememberLastUsedCamera: true,
-
-                supportedScanTypes: [
-                    Html5QrcodeScanType.SCAN_TYPE_CAMERA
-                ]
+                experimentalFeatures:{
+                    useBarCodeDetectorIfSupported:true
+                }
             },
 
             function(decodedText){
 
-                if(!scannedList.includes(decodedText)){
+                if(scannedList.includes(decodedText)){
 
-                    scannedList.push(decodedText);
+                    showDuplicateWarning();
 
-                    document.getElementById(
-                        "resultList"
-                    ).value =
-                    scannedList.join("\n");
+                    navigator.vibrate?.(
+                        [200,100,200]
+                    );
 
-                    document.getElementById(
-                        "count"
-                    ).innerText =
-                    scannedList.length;
-
-                    navigator.vibrate?.(120);
-
-                    flashEffect();
-
-                    console.log(decodedText);
+                    return;
                 }
-            },
 
-            function(errorMessage){
+                scannedList.push(decodedText);
+
+                document.getElementById(
+                    "resultList"
+                ).value =
+                scannedList.join("\n");
+
+                document.getElementById(
+                    "count"
+                ).innerText =
+                scannedList.length;
+
+                navigator.vibrate?.(100);
+
+                flashEffect();
             }
         );
 
@@ -276,9 +243,7 @@ async function startScanner(){
 
     }catch(err){
 
-        console.error(err);
-
-        alert("Không mở được camera:\n" + err);
+        alert(err);
     }
 }
 
@@ -296,14 +261,13 @@ async function stopScanner(){
 
 function copyList(){
 
-    const textarea =
-        document.getElementById("resultList");
-
     navigator.clipboard.writeText(
-        textarea.value
+        document.getElementById(
+            "resultList"
+        ).value
     );
 
-    alert("Đã copy danh sách");
+    alert("Đã copy");
 }
 
 function clearList(){
@@ -319,13 +283,64 @@ function clearList(){
     ).innerText = 0;
 }
 
-function flashEffect(){
+async function sendToSheet(){
 
-    document.body.style.opacity = "0.92";
+    if(scannedList.length === 0){
+
+        alert("Không có dữ liệu");
+
+        return;
+    }
+
+    try{
+
+        for(let code of scannedList){
+
+            await fetch(
+                GOOGLE_SCRIPT_URL,
+                {
+                    method:"POST",
+
+                    body:JSON.stringify({
+                        code:code
+                    })
+                }
+            );
+        }
+
+        alert("Đã gửi Google Sheet");
+
+    }catch(err){
+
+        alert("Lỗi gửi dữ liệu");
+    }
+}
+
+function showDuplicateWarning(){
+
+    const warning =
+        document.getElementById(
+            "warning"
+        );
+
+    warning.style.display = "block";
 
     setTimeout(() => {
 
-        document.body.style.opacity = "1";
+        warning.style.display = "none";
+
+    }, 1500);
+}
+
+function flashEffect(){
+
+    document.body.style.opacity =
+        "0.92";
+
+    setTimeout(() => {
+
+        document.body.style.opacity =
+            "1";
 
     }, 100);
 }
@@ -333,61 +348,47 @@ function flashEffect(){
 function setupTapFocus(){
 
     const wrapper =
-        document.getElementById("reader-wrapper");
+        document.getElementById(
+            "reader-wrapper"
+        );
 
     const focusBox =
-        document.getElementById("focus-box");
+        document.getElementById(
+            "focus-box"
+        );
 
-    wrapper.addEventListener("click", async function(e){
+    wrapper.addEventListener(
+        "click",
+        function(e){
 
-        const rect =
-            wrapper.getBoundingClientRect();
+            const rect =
+                wrapper.getBoundingClientRect();
 
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+            const x =
+                e.clientX - rect.left;
 
-        focusBox.style.left = x + "px";
-        focusBox.style.top = y + "px";
+            const y =
+                e.clientY - rect.top;
 
-        focusBox.style.display = "block";
+            focusBox.style.left =
+                x + "px";
 
-        setTimeout(() => {
-            focusBox.style.display = "none";
-        }, 800);
+            focusBox.style.top =
+                y + "px";
 
-        navigator.vibrate?.(30);
+            focusBox.style.display =
+                "block";
 
-        try{
+            setTimeout(() => {
 
-            const video =
-                wrapper.querySelector("video");
+                focusBox.style.display =
+                    "none";
 
-            const stream =
-                video.srcObject;
+            }, 800);
 
-            const track =
-                stream.getVideoTracks()[0];
-
-            const capabilities =
-                track.getCapabilities();
-
-            if(capabilities.focusMode){
-
-                await track.applyConstraints({
-                    advanced: [
-                        {
-                            focusMode: "continuous"
-                        }
-                    ]
-                });
-            }
-
-        }catch(err){
-
-            console.log(err);
+            navigator.vibrate?.(30);
         }
-
-    });
+    );
 }
 
 </script>
