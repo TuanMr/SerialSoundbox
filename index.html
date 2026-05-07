@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
 <title>QR & Barcode Scanner</title>
 
@@ -11,10 +11,10 @@
 <style>
 
 body{
-    font-family: Arial, sans-serif;
-    background:#f5f5f5;
-    padding:15px;
     margin:0;
+    padding:15px;
+    background:#f5f5f5;
+    font-family:Arial,sans-serif;
 }
 
 .container{
@@ -29,9 +29,9 @@ h2{
 
 #reader{
     width:100%;
-    border-radius:12px;
-    overflow:hidden;
     background:white;
+    border-radius:15px;
+    overflow:hidden;
 }
 
 button{
@@ -42,7 +42,6 @@ button{
     border-radius:12px;
     font-size:16px;
     font-weight:bold;
-    cursor:pointer;
 }
 
 .start{
@@ -67,17 +66,17 @@ button{
 
 textarea{
     width:100%;
-    height:250px;
+    height:220px;
     margin-top:15px;
     padding:10px;
-    font-size:16px;
-    border-radius:12px;
     box-sizing:border-box;
+    border-radius:12px;
+    font-size:16px;
 }
 
 .info{
-    margin-top:10px;
     text-align:center;
+    margin-top:10px;
     color:#666;
     font-size:14px;
 }
@@ -112,7 +111,7 @@ Clear List
 <textarea id="resultList" placeholder="Danh sách mã sẽ hiện ở đây..."></textarea>
 
 <div class="info">
-Hỗ trợ QR Code + Barcode
+Hỗ trợ QR + Barcode
 </div>
 
 </div>
@@ -133,38 +132,43 @@ async function startScanner(){
 
         html5QrCode = new Html5Qrcode("reader");
 
-        const cameras = await Html5Qrcode.getCameras();
-
-        if(cameras.length === 0){
-            alert("Không tìm thấy camera");
-            return;
-        }
-
-        let cameraId = cameras[0].id;
-
-        if(cameras.length > 1){
-
-            let backCamera = cameras.find(cam =>
-                cam.label.toLowerCase().includes("back") ||
-                cam.label.toLowerCase().includes("rear")
-            );
-
-            if(backCamera){
-                cameraId = backCamera.id;
-            }
-        }
-
         await html5QrCode.start(
-            cameraId,
+
             {
-                fps: 10,
-                qrbox: {
-                    width: 250,
-                    height: 250
+                facingMode: {
+                    exact: "environment"
                 }
             },
 
-            (decodedText) => {
+            {
+                fps: 15,
+
+                qrbox: function(viewfinderWidth, viewfinderHeight){
+
+                    let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+
+                    let size = Math.floor(minEdge * 0.8);
+
+                    return {
+                        width: size,
+                        height: size
+                    };
+                },
+
+                aspectRatio: 1.0,
+
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                },
+
+                rememberLastUsedCamera: true,
+
+                supportedScanTypes: [
+                    Html5QrcodeScanType.SCAN_TYPE_CAMERA
+                ]
+            },
+
+            function(decodedText){
 
                 if(!scannedList.includes(decodedText)){
 
@@ -173,13 +177,13 @@ async function startScanner(){
                     document.getElementById("resultList").value =
                         scannedList.join("\n");
 
-                    navigator.vibrate?.(100);
+                    navigator.vibrate?.(120);
 
-                    console.log("Scanned:", decodedText);
+                    console.log("SCAN:", decodedText);
                 }
             },
 
-            (errorMessage) => {
+            function(errorMessage){
             }
         );
 
@@ -202,8 +206,6 @@ async function stopScanner(){
         await html5QrCode.clear();
 
         scannerRunning = false;
-
-        console.log("Scanner stopped");
     }
 }
 
@@ -215,7 +217,7 @@ function copyList(){
 
     textarea.setSelectionRange(0, 99999);
 
-    document.execCommand("copy");
+    navigator.clipboard.writeText(textarea.value);
 
     alert("Đã copy danh sách");
 }
