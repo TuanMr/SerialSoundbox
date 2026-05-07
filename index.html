@@ -3,7 +3,8 @@
 
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
 <title>QR & Barcode Scanner</title>
 
@@ -28,12 +29,41 @@ h2{
     margin-bottom:15px;
 }
 
+#reader-wrapper{
+    position:relative;
+    width:100%;
+}
+
 #reader{
     width:100%;
     min-height:350px;
     background:black;
     border-radius:15px;
     overflow:hidden;
+}
+
+#focus-box{
+    position:absolute;
+    width:80px;
+    height:80px;
+    border:3px solid #ffd400;
+    border-radius:12px;
+    display:none;
+    pointer-events:none;
+    transform:translate(-50%, -50%);
+    animation:focusAnim 0.5s ease;
+}
+
+@keyframes focusAnim{
+    0%{
+        transform:translate(-50%, -50%) scale(1.4);
+        opacity:0;
+    }
+
+    100%{
+        transform:translate(-50%, -50%) scale(1);
+        opacity:1;
+    }
 }
 
 button{
@@ -99,7 +129,13 @@ textarea{
 
 <h2>QR & Barcode Scanner</h2>
 
-<div id="reader"></div>
+<div id="reader-wrapper">
+
+    <div id="reader"></div>
+
+    <div id="focus-box"></div>
+
+</div>
 
 <div class="scan-count">
 Tổng scan: <span id="count">0</span>
@@ -125,7 +161,7 @@ Clear List
 placeholder="Danh sách mã sẽ hiện ở đây..."></textarea>
 
 <div class="info">
-Hỗ trợ QR Code + Barcode
+Chạm vào màn hình camera để focus QR
 </div>
 
 </div>
@@ -159,12 +195,12 @@ async function startScanner(){
 
                 qrbox: function(viewfinderWidth, viewfinderHeight){
 
-                    let minEdge = Math.min(
-                        viewfinderWidth,
-                        viewfinderHeight
-                    );
+                    let minEdge =
+                        Math.min(viewfinderWidth,
+                        viewfinderHeight);
 
-                    let size = Math.floor(minEdge * 0.75);
+                    let size =
+                        Math.floor(minEdge * 0.75);
 
                     return {
                         width: size,
@@ -212,17 +248,21 @@ async function startScanner(){
 
                     scannedList.push(decodedText);
 
-                    document.getElementById("resultList").value =
-                        scannedList.join("\n");
+                    document.getElementById(
+                        "resultList"
+                    ).value =
+                    scannedList.join("\n");
 
-                    document.getElementById("count").innerText =
-                        scannedList.length;
+                    document.getElementById(
+                        "count"
+                    ).innerText =
+                    scannedList.length;
 
                     navigator.vibrate?.(120);
 
                     flashEffect();
 
-                    console.log("SCAN:", decodedText);
+                    console.log(decodedText);
                 }
             },
 
@@ -231,6 +271,8 @@ async function startScanner(){
         );
 
         scannerRunning = true;
+
+        setupTapFocus();
 
     }catch(err){
 
@@ -249,8 +291,6 @@ async function stopScanner(){
         await html5QrCode.clear();
 
         scannerRunning = false;
-
-        console.log("Scanner stopped");
     }
 }
 
@@ -259,7 +299,9 @@ function copyList(){
     const textarea =
         document.getElementById("resultList");
 
-    navigator.clipboard.writeText(textarea.value);
+    navigator.clipboard.writeText(
+        textarea.value
+    );
 
     alert("Đã copy danh sách");
 }
@@ -268,9 +310,13 @@ function clearList(){
 
     scannedList = [];
 
-    document.getElementById("resultList").value = "";
+    document.getElementById(
+        "resultList"
+    ).value = "";
 
-    document.getElementById("count").innerText = 0;
+    document.getElementById(
+        "count"
+    ).innerText = 0;
 }
 
 function flashEffect(){
@@ -282,6 +328,66 @@ function flashEffect(){
         document.body.style.opacity = "1";
 
     }, 100);
+}
+
+function setupTapFocus(){
+
+    const wrapper =
+        document.getElementById("reader-wrapper");
+
+    const focusBox =
+        document.getElementById("focus-box");
+
+    wrapper.addEventListener("click", async function(e){
+
+        const rect =
+            wrapper.getBoundingClientRect();
+
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        focusBox.style.left = x + "px";
+        focusBox.style.top = y + "px";
+
+        focusBox.style.display = "block";
+
+        setTimeout(() => {
+            focusBox.style.display = "none";
+        }, 800);
+
+        navigator.vibrate?.(30);
+
+        try{
+
+            const video =
+                wrapper.querySelector("video");
+
+            const stream =
+                video.srcObject;
+
+            const track =
+                stream.getVideoTracks()[0];
+
+            const capabilities =
+                track.getCapabilities();
+
+            if(capabilities.focusMode){
+
+                await track.applyConstraints({
+                    advanced: [
+                        {
+                            focusMode: "continuous"
+                        }
+                    ]
+                });
+            }
+
+        }catch(err){
+
+            console.log(err);
+        }
+
+    });
 }
 
 </script>
