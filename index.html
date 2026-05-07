@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>QR & Barcode Scanner</title>
 
@@ -29,7 +30,8 @@ h2{
 
 #reader{
     width:100%;
-    background:white;
+    min-height:350px;
+    background:black;
     border-radius:15px;
     overflow:hidden;
 }
@@ -75,10 +77,17 @@ textarea{
 }
 
 .info{
-    text-align:center;
     margin-top:10px;
+    text-align:center;
     color:#666;
     font-size:14px;
+}
+
+.scan-count{
+    margin-top:10px;
+    text-align:center;
+    font-size:18px;
+    font-weight:bold;
 }
 
 </style>
@@ -91,6 +100,10 @@ textarea{
 <h2>QR & Barcode Scanner</h2>
 
 <div id="reader"></div>
+
+<div class="scan-count">
+Tổng scan: <span id="count">0</span>
+</div>
 
 <button class="start" onclick="startScanner()">
 Start Scanner
@@ -108,10 +121,11 @@ Copy List
 Clear List
 </button>
 
-<textarea id="resultList" placeholder="Danh sách mã sẽ hiện ở đây..."></textarea>
+<textarea id="resultList"
+placeholder="Danh sách mã sẽ hiện ở đây..."></textarea>
 
 <div class="info">
-Hỗ trợ QR + Barcode
+Hỗ trợ QR Code + Barcode
 </div>
 
 </div>
@@ -141,13 +155,16 @@ async function startScanner(){
             },
 
             {
-                fps: 15,
+                fps: 20,
 
                 qrbox: function(viewfinderWidth, viewfinderHeight){
 
-                    let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    let minEdge = Math.min(
+                        viewfinderWidth,
+                        viewfinderHeight
+                    );
 
-                    let size = Math.floor(minEdge * 0.8);
+                    let size = Math.floor(minEdge * 0.75);
 
                     return {
                         width: size,
@@ -155,7 +172,28 @@ async function startScanner(){
                     };
                 },
 
-                aspectRatio: 1.0,
+                aspectRatio: 1.777778,
+
+                disableFlip: false,
+
+                videoConstraints: {
+
+                    facingMode: {
+                        exact: "environment"
+                    },
+
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+
+                    advanced: [
+                        {
+                            focusMode: "continuous"
+                        },
+                        {
+                            zoom: 1.5
+                        }
+                    ]
+                },
 
                 experimentalFeatures: {
                     useBarCodeDetectorIfSupported: true
@@ -177,7 +215,12 @@ async function startScanner(){
                     document.getElementById("resultList").value =
                         scannedList.join("\n");
 
+                    document.getElementById("count").innerText =
+                        scannedList.length;
+
                     navigator.vibrate?.(120);
+
+                    flashEffect();
 
                     console.log("SCAN:", decodedText);
                 }
@@ -206,16 +249,15 @@ async function stopScanner(){
         await html5QrCode.clear();
 
         scannerRunning = false;
+
+        console.log("Scanner stopped");
     }
 }
 
 function copyList(){
 
-    const textarea = document.getElementById("resultList");
-
-    textarea.select();
-
-    textarea.setSelectionRange(0, 99999);
+    const textarea =
+        document.getElementById("resultList");
 
     navigator.clipboard.writeText(textarea.value);
 
@@ -227,6 +269,19 @@ function clearList(){
     scannedList = [];
 
     document.getElementById("resultList").value = "";
+
+    document.getElementById("count").innerText = 0;
+}
+
+function flashEffect(){
+
+    document.body.style.opacity = "0.92";
+
+    setTimeout(() => {
+
+        document.body.style.opacity = "1";
+
+    }, 100);
 }
 
 </script>
