@@ -142,7 +142,7 @@ Clear List
 <script>
 
 const GOOGLE_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbydO390jfDVn0xXT17hoxxX8dZcs5oSVY7WVsq1LOUjF33Z8GUrNTFjeUTfrMN75mLB/exec";
+"https://script.google.com/macros/s/AKfycbyx4I-Y_BgBAi5feq9h2NASnSJAeUscVVAIDugoPDEe4ndX35rElOxZW-JDtyJvlzuMoA/exec";
 
 let scannedList = [];
 let html5QrCode = null;
@@ -284,6 +284,51 @@ function clearList(){
 }
 
 async function sendToSheet(){
+
+    if(scannedList.length === 0){
+
+        alert("Không có dữ liệu");
+
+        return;
+    }
+
+    try{
+
+        for(let code of scannedList){
+
+            const response = await fetch(
+                GOOGLE_SCRIPT_URL,
+                {
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":
+                        "text/plain;charset=utf-8"
+                    },
+
+                    body:JSON.stringify({
+                        code:code
+                    })
+                }
+            );
+
+            const result =
+                await response.text();
+
+            console.log(result);
+        }
+
+        alert("Đã gửi Google Sheet");
+
+    }catch(err){
+
+        console.error(err);
+
+        alert(
+            "Lỗi gửi dữ liệu:\n" + err
+        );
+    }
+}{
 
     if(scannedList.length === 0){
 
