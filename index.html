@@ -24,6 +24,10 @@ body{
     margin:auto;
 }
 
+h2{
+    text-align:center;
+}
+
 #reader-wrapper{
     position:relative;
 }
@@ -43,8 +47,8 @@ body{
     border:3px solid yellow;
     border-radius:12px;
     display:none;
+    transform:translate(-50%,-50%);
     pointer-events:none;
-    transform:translate(-50%, -50%);
 }
 
 button{
@@ -57,11 +61,30 @@ button{
     font-weight:bold;
 }
 
-.start{background:#28a745;color:white;}
-.stop{background:#ff9800;color:white;}
-.copy{background:#007bff;color:white;}
-.clear{background:#dc3545;color:white;}
-.sheet{background:#673ab7;color:white;}
+.start{
+    background:#28a745;
+    color:white;
+}
+
+.stop{
+    background:#ff9800;
+    color:white;
+}
+
+.sheet{
+    background:#673ab7;
+    color:white;
+}
+
+.copy{
+    background:#007bff;
+    color:white;
+}
+
+.clear{
+    background:#dc3545;
+    color:white;
+}
 
 textarea{
     width:100%;
@@ -73,20 +96,20 @@ textarea{
     font-size:16px;
 }
 
-#warning{
-    margin-top:10px;
-    text-align:center;
-    font-size:18px;
-    font-weight:bold;
-    color:red;
-    display:none;
-}
-
 .scan-count{
     margin-top:10px;
     text-align:center;
     font-size:18px;
     font-weight:bold;
+}
+
+#warning{
+    margin-top:10px;
+    text-align:center;
+    font-size:20px;
+    color:red;
+    font-weight:bold;
+    display:none;
 }
 
 </style>
@@ -115,23 +138,28 @@ Tổng scan:
 QR ĐÃ TỒN TẠI
 </div>
 
-<button class="start" onclick="startScanner()">
+<button class="start"
+onclick="startScanner()">
 Start Scanner
 </button>
 
-<button class="stop" onclick="stopScanner()">
+<button class="stop"
+onclick="stopScanner()">
 Stop Scanner
 </button>
 
-<button class="sheet" onclick="sendToSheet()">
+<button class="sheet"
+onclick="sendToSheet()">
 Send to Google Sheet
 </button>
 
-<button class="copy" onclick="copyList()">
+<button class="copy"
+onclick="copyList()">
 Copy List
 </button>
 
-<button class="clear" onclick="clearList()">
+<button class="clear"
+onclick="clearList()">
 Clear List
 </button>
 
@@ -142,10 +170,12 @@ Clear List
 <script>
 
 const GOOGLE_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbyx4I-Y_BgBAi5feq9h2NASnSJAeUscVVAIDugoPDEe4ndX35rElOxZW-JDtyJvlzuMoA/exec";
+"https://script.google.com/macros/s/AKfycbwPQ5QZFUS8vmcU-ax3YFtFU0VhheBZr4ScohV-ms63_SxvNRoueHUieZzl85DeU02ZgA/exec";
 
 let scannedList = [];
+
 let html5QrCode = null;
+
 let scannerRunning = false;
 
 async function startScanner(){
@@ -208,7 +238,11 @@ async function startScanner(){
 
             function(decodedText){
 
-                if(scannedList.includes(decodedText)){
+                if(
+                    scannedList.includes(
+                        decodedText
+                    )
+                ){
 
                     showDuplicateWarning();
 
@@ -219,7 +253,9 @@ async function startScanner(){
                     return;
                 }
 
-                scannedList.push(decodedText);
+                scannedList.push(
+                    decodedText
+                );
 
                 document.getElementById(
                     "resultList"
@@ -249,7 +285,10 @@ async function startScanner(){
 
 async function stopScanner(){
 
-    if(html5QrCode && scannerRunning){
+    if(
+        html5QrCode &&
+        scannerRunning
+    ){
 
         await html5QrCode.stop();
 
@@ -283,7 +322,7 @@ function clearList(){
     ).innerText = 0;
 }
 
-async function sendToSheet(){
+function sendToSheet(){
 
     if(scannedList.length === 0){
 
@@ -296,68 +335,37 @@ async function sendToSheet(){
 
         for(let code of scannedList){
 
-            const response = await fetch(
+            const payload =
+                JSON.stringify({
+                    code:code
+                });
+
+            const blob =
+                new Blob(
+                    [payload],
+                    {
+                        type:
+                        "text/plain"
+                    }
+                );
+
+            navigator.sendBeacon(
                 GOOGLE_SCRIPT_URL,
-                {
-                    method:"POST",
-
-                    headers:{
-                        "Content-Type":
-                        "text/plain;charset=utf-8"
-                    },
-
-                    body:JSON.stringify({
-                        code:code
-                    })
-                }
+                blob
             );
-
-            const result =
-                await response.text();
-
-            console.log(result);
         }
 
-        alert("Đã gửi Google Sheet");
+        alert(
+            "Đã gửi Google Sheet"
+        );
 
     }catch(err){
 
         console.error(err);
 
         alert(
-            "Lỗi gửi dữ liệu:\n" + err
+            "Lỗi gửi dữ liệu"
         );
-    }
-}{
-
-    if(scannedList.length === 0){
-
-        alert("Không có dữ liệu");
-
-        return;
-    }
-
-    try{
-
-        for(let code of scannedList){
-
-            await fetch(
-                GOOGLE_SCRIPT_URL,
-                {
-                    method:"POST",
-
-                    body:JSON.stringify({
-                        code:code
-                    })
-                }
-            );
-        }
-
-        alert("Đã gửi Google Sheet");
-
-    }catch(err){
-
-        alert("Lỗi gửi dữ liệu");
     }
 }
 
@@ -368,11 +376,13 @@ function showDuplicateWarning(){
             "warning"
         );
 
-    warning.style.display = "block";
+    warning.style.display =
+        "block";
 
     setTimeout(() => {
 
-        warning.style.display = "none";
+        warning.style.display =
+            "none";
 
     }, 1500);
 }
@@ -407,7 +417,8 @@ function setupTapFocus(){
         function(e){
 
             const rect =
-                wrapper.getBoundingClientRect();
+                wrapper
+                .getBoundingClientRect();
 
             const x =
                 e.clientX - rect.left;
