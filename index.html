@@ -62,7 +62,6 @@ input{
     transform:translate(-50%,-50%);
     pointer-events:none;
 }
-
 /* Thông báo trùng lặp - hiển thị trên camera */
 #overlay-warning{
     position:absolute;
@@ -178,14 +177,15 @@ placeholder="Nhập Sale">
 
     <div id="focus-box"></div>
 
-    <!-- Thông báo trùng lặp hiển thị trên camera -->
-    <div id="overlay-warning">MÃ ĐÃ TỒN TẠI</div>
-
 </div>
 
 <div class="scan-count">
 Tổng scan:
 <span id="count">0</span>
+</div>
+
+<div id="warning">
+MÃ ĐÃ TỒN TẠI
 </div>
 
 <div id="status"></div>
@@ -298,8 +298,6 @@ async function startScanner(){
 
                     Html5QrcodeSupportedFormats.CODE_39,
 
-                    Html5QrcodeSupportedFormats.CODE_93,
-
                     Html5QrcodeSupportedFormats.EAN_13,
 
                     Html5QrcodeSupportedFormats.EAN_8,
@@ -308,21 +306,7 @@ async function startScanner(){
 
                     Html5QrcodeSupportedFormats.UPC_E,
 
-                    Html5QrcodeSupportedFormats.ITF,
-
-                    Html5QrcodeSupportedFormats.MSI,
-
-                    Html5QrcodeSupportedFormats.CODABAR,
-
-                    Html5QrcodeSupportedFormats.GS1_DATABAR,
-
-                    Html5QrcodeSupportedFormats.GS1_DATABAR_EXPANDED,
-
-                    Html5QrcodeSupportedFormats.DATA_MATRIX,
-
-                    Html5QrcodeSupportedFormats.AZTEC,
-
-                    Html5QrcodeSupportedFormats.PDF_417
+                    Html5QrcodeSupportedFormats.ITF
                 ],
 
                 videoConstraints:{
@@ -347,7 +331,7 @@ async function startScanner(){
                         },
 
                         {
-                            zoom:1.5
+                            zoom:2
                         }
                     ]
                 },
@@ -561,20 +545,19 @@ function setStatus(text){
     ).innerText = text;
 }
 
-// Cải thiện: Hiển thị thông báo trên camera
 function showDuplicateWarning(){
 
-    const overlayWarning =
+    const warning =
         document.getElementById(
-            "overlay-warning"
+            "warning"
         );
 
-    overlayWarning.style.display =
+    warning.style.display =
         "block";
 
     setTimeout(() => {
 
-        overlayWarning.style.display =
+        warning.style.display =
             "none";
 
     }, 1500);
