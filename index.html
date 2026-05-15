@@ -1,382 +1,720 @@
 <!DOCTYPE html>
 <html lang="vi">
- <head>
- <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>NGUYỄN MẠNH TUẤN QR SCAN</title>
- <!-- QuaggaJS - Chuyên biệt cho barcode scanning -->
- <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
- <style>
- body{
-     margin:0;
-     padding:15px;
-     background:#f5f5f5;
-     font-family:Arial,sans-serif;
- }
- .container{
-     max-width:600px;
-     margin:auto;
- }
- h2{
-     text-align:center;
- }
- input{
-     width:100%;
-     padding:14px;
-     margin-bottom:15px;
-     border-radius:12px;
-     border:1px solid #ccc;
-     box-sizing:border-box;
-     font-size:16px;
- }
- #reader-wrapper{
-     position:relative;
- }
- #reader{
-     width:100%;
-     min-height:100px;
-     background:black;
-     border-radius:15px;
-     overflow:hidden;
- }
- #focus-box{
-     position:absolute;
-     width:100px;
-     height:50px;
-     border:3px solid yellow;
-     border-radius:12px;
-     display:none;
-     transform:translate(-50%,-50%);
-     pointer-events:none;
- }
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NGUYỄN MẠNH TUẤN - QR SCANNER</title>
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.10.2/dist/quagga.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
- /* Bộ đếm QR hiển thị trên camera */
- #scan-counter{
-     position:absolute;
-     top:20px;
-     right:20px;
-     background:rgba(255, 0, 0, 0.85);
-     color:white;
-     padding:15px 25px;
-     border-radius:12px;
-     font-size:28px;
-     font-weight:bold;
-     display:none;
-     pointer-events:none;
-     z-index:100;
-     box-shadow:0 4px 15px rgba(0,0,0,0.5);
-     min-width:80px;
-     text-align:center;
- }
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            color: #e2e8f0;
+        }
 
- /* Thông báo trùng lặp - hiển thị trên camera */
- #overlay-warning{
-     position:absolute;
-     top:50%;
-     left:50%;
-     transform:translate(-50%, -50%);
-     background:rgba(255, 0, 0, 0.9);
-     color:white;
-     padding:20px 30px;
-     border-radius:15px;
-     font-size:24px;
-     font-weight:bold;
-     display:none;
-     pointer-events:none;
-     z-index:100;
-     box-shadow:0 4px 15px rgba(0,0,0,0.5);
-     animation:pulse 0.5s ease-in-out;
- }
- @keyframes pulse {
-     0%, 100% { transform: translate(-50%, -50%) scale(1); }
-     50% { transform: translate(-50%, -50%) scale(1.1); }
- }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
 
- button{
-     width:100%;
-     padding:15px;
-     margin-top:10px;
-     border:none;
-     border-radius:12px;
-     font-size:16px;
-     font-weight:bold;
- }
- .start{
-     background:#28a745;
-     color:white;
- }
- .stop{
-     background:#ff9800;
-     color:white;
- }
- .copy{
-     background:#007bff;
-     color:white;
- }
- .clear{
-     background:#dc3545;
-     color:white;
- }
- textarea{
-     width:100%;
-     height:220px;
-     margin-top:15px;
-     padding:10px;
-     border-radius:12px;
-     box-sizing:border-box;
-     font-size:16px;
- }
- .scan-count{
-     margin-top:10px;
-     text-align:center;
-     font-size:18px;
-     font-weight:bold;
- }
- #warning{
-     margin-top:10px;
-     text-align:center;
-     font-size:20px;
-     color:red;
-     font-weight:bold;
-     display:none;
- }
- #status{
-     margin-top:10px;
-     text-align:center;
-     font-size:15px;
-     font-weight:bold;
- }
- .info{
-     text-align:center;
-     margin-top:10px;
-     color:#666;
-     font-size:14px;
- }
- </style>
- </head>
- <body>
- <div class="container">
- <h2>NGUYỄN MẠNH TUẤN QR SCAN</h2>
- <input type="text" id="saleInput" placeholder="Nhập Sale">
- <div id="reader-wrapper">
-     <div id="reader"></div>
-     <div id="focus-box"></div>
-     <!-- Bộ đếm QR hiển thị trên camera -->
-     <div id="scan-counter">0</div>
-     <!-- Thông báo trùng lặp hiển thị trên camera -->
-     <div id="overlay-warning">MÃ QR ĐÃ TỒN TẠI</div>
- </div>
- <div class="scan-count"> Tổng scan: <span id="count">0</span> </div>
- <div id="status"></div>
- <button class="start" onclick="startScanner()"> Start Scanner </button>
- <button class="stop" onclick="stopScanner()"> Stop Scanner </button>
- <button class="copy" onclick="copyList()"> Copy List </button>
- <button class="clear" onclick="clearList()"> Clear List </button>
- <textarea id="resultList" placeholder="DANH SÁCH MÃ QR ĐÃ SCAN"></textarea>
- <div class="info"> Được viết bởi Nguyễn Mạnh Tuấn </div>
- </div>
- <script>
- const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6Uwfr6KdbZs9hXfBV2gBb0cmHCCdgjicUAa14MRzhJDUY_MtKLPmA0QKm9BEYKXEw/exec";
- let scannedList = [];
- let scannerRunning = false;
- let lastScanTime = 0;
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: slideDown 0.6s ease-out;
+        }
 
- async function startScanner(){
-     const sale = document.getElementById("saleInput").value.trim();
-     if(!sale){
-         alert("BẠN CHƯA NHẬP TÊN SALE");
-         return;
-     }
-     if(scannerRunning){
-         return;
-     }
-     try{
-         // ✅ KHỞI ĐỘNG QUAGGAJS
-         Quagga.init({
-             inputStream: {
-                 name: "Live",
-                 type: "LiveStream",
-                 target: document.querySelector('#reader'),
-                 constraints: {
-                     facingMode: "environment",
-                     width: { ideal: 600 },
-                     height: { ideal: 400 }
-                 }
-             },
-             decoder: {
-                 readers: [
-                     "code_128_reader",
-                     "ean_reader",
-                     "ean_8_reader",
-                     "code_39_reader",
-                     "code_93_reader",
-                     "upc_reader",
-                     "upc_e_reader",
-                     "qr_reader"
-                 ],
-                 debug: {
-                     showCanvas: false,
-                     showPatternMarkers: false,
-                     showFrequencyBars: false,
-                     showScanline: false
-                 }
-             },
-             locator: {
-                 halfSample: true,
-                 patchSize: "medium"
-             },
-             numOfWorkers: 4,
-             frequency: 10
-         }, function(err) {
-             if (err) {
-                 console.log("Initialization error:", err);
-                 alert("Lỗi khởi động camera:\n" + err);
-                 return;
-             }
-             console.log("✅ Quagga initialized");
-             
-             Quagga.onDetected(onQuaggaDetected);
-             Quagga.start();
-             scannerRunning = true;
-             document.getElementById("scan-counter").style.display = "block";
-             setStatus("Đang quét...");
-             setupTapFocus();
-         });
-     }catch(err){
-         console.error(err);
-         alert("Lỗi camera:\n" + err);
-     }
- }
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
 
- function onQuaggaDetected(result){
-     try{
-         if(!result || !result.codeResult){
-             return;
-         }
-         
-         const decodedText = result.codeResult.code;
-         if(!decodedText || decodedText.trim() === ""){
-             return;
-         }
-         
-         const now = Date.now();
-         if(now - lastScanTime < 1000){
-             return;
-         }
-         lastScanTime = now;
+        .subtitle {
+            font-size: 14px;
+            color: #94a3b8;
+        }
 
-         // ✅ KIỂM TRA XEM QR ĐÃ TỒN TẠI HAY CHƯA
-         if(scannedList.includes(decodedText)){
-             showDuplicateWarning();
-             navigator.vibrate?.([200,100,200]);
-             return; // ❌ DỪNG HẸN - KHÔNG GỬI GOOGLE SHEET
-         }
+        .input-group {
+            margin-bottom: 25px;
+            animation: slideUp 0.6s ease-out 0.1s both;
+        }
 
-         // ✅ THÊM VÀO DANH SÁCH
-         scannedList.push(decodedText);
-         document.getElementById("resultList").value = scannedList.join("\n");
-         document.getElementById("count").innerText = scannedList.length;
-         document.getElementById("scan-counter").innerText = scannedList.length;
-         
-         navigator.vibrate?.(100);
-         flashEffect();
+        input[type="text"] {
+            width: 100%;
+            padding: 16px 18px;
+            border: 2px solid #1e293b;
+            border-radius: 12px;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
 
-         let scanType = "BARCODE";
-         if(result.codeResult.format === "qr_code"){
-             scanType = "QR";
-         } else if(result.codeResult.format === "code_128"){
-             scanType = "CODE_128";
-         } else if(result.codeResult.format === "ean_13"){
-             scanType = "EAN_13";
-         }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: #334155;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
 
-         // ✅ CHỈ GỬI GOOGLE SHEET KHI QR CHƯA TỒN TẠI
-         autoSendToSheet(decodedText, scanType);
-     }catch(callbackErr){
-         console.error("❌ Error in quagga detected:", callbackErr);
-     }
- }
+        input[type="text"]::placeholder {
+            color: #64748b;
+        }
 
- async function autoSendToSheet(code, type){
-     try{
-         const sale = document.getElementById("saleInput").value.trim();
-         if(!sale){
-             setStatus("Chưa nhập Sale");
-             return;
-         }
-         setStatus("Đang gửi: " + code);
-         const url = GOOGLE_SCRIPT_URL +
-             "?sale=" + encodeURIComponent(sale) +
-             "&code=" + encodeURIComponent(code) +
-             "&type=" + encodeURIComponent(type);
-         await fetch(url, {
-             method:"GET",
-             mode:"no-cors",
-             cache:"no-cache"
-         });
-         setStatus("Đã gửi: " + code);
-     }catch(err){
-         console.error(err);
-         setStatus("Lỗi gửi dữ liệu");
-     }
- }
+        .camera-section {
+            margin-bottom: 30px;
+            animation: slideUp 0.6s ease-out 0.2s both;
+        }
 
- async function stopScanner(){
-     if(scannerRunning){
-         Quagga.stop();
-         scannerRunning = false;
-         document.getElementById("scan-counter").style.display = "none";
-     }
- }
+        .camera-wrapper {
+            position: relative;
+            background: #0f172a;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid #1e293b;
+            aspect-ratio: 4/3;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
 
- function copyList(){
-     navigator.clipboard.writeText(document.getElementById("resultList").value);
-     alert("Đã copy");
- }
+        #interactive {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
 
- function clearList(){
-     scannedList = [];
-     document.getElementById("resultList").value = "";
-     document.getElementById("count").innerText = 0;
-     document.getElementById("scan-counter").innerText = 0;
-     setStatus("");
- }
+        #scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
- function setStatus(text){
-     document.getElementById("status").innerText = text;
- }
+        .scan-frame {
+            width: 280px;
+            height: 180px;
+            border: 3px solid #60a5fa;
+            border-radius: 12px;
+            box-shadow: 
+                inset 0 0 20px rgba(96, 165, 250, 0.2),
+                0 0 30px rgba(96, 165, 250, 0.3);
+            animation: pulse-frame 2s ease-in-out infinite;
+            position: relative;
+        }
 
- function showDuplicateWarning(){
-     const overlayWarning = document.getElementById("overlay-warning");
-     overlayWarning.style.display = "block";
-     setTimeout(() => {
-         overlayWarning.style.display = "none";
-     }, 1500);
- }
+        .scan-frame::before,
+        .scan-frame::after {
+            content: '';
+            position: absolute;
+            background: #60a5fa;
+        }
 
- function flashEffect(){
-     document.body.style.opacity = "0.9";
-     setTimeout(() => {
-         document.body.style.opacity = "1";
-     }, 100);
- }
+        .scan-frame::before {
+            top: 0;
+            left: 0;
+            width: 30px;
+            height: 3px;
+        }
 
- function setupTapFocus(){
-     const wrapper = document.getElementById("reader-wrapper");
-     const focusBox = document.getElementById("focus-box");
-     wrapper.addEventListener("click", function(e){
-         const rect = wrapper.getBoundingClientRect();
-         const x = e.clientX - rect.left;
-         const y = e.clientY - rect.top;
-         focusBox.style.left = x + "px";
-         focusBox.style.top = y + "px";
-         focusBox.style.display = "block";
-         setTimeout(() => {
-             focusBox.style.display = "none";
-         }, 700);
-         navigator.vibrate?.(30);
-     });
- }
- </script>
- </body>
+        .scan-frame::after {
+            bottom: 0;
+            right: 0;
+            width: 30px;
+            height: 3px;
+        }
+
+        @keyframes pulse-frame {
+            0%, 100% { box-shadow: inset 0 0 20px rgba(96, 165, 250, 0.2), 0 0 30px rgba(96, 165, 250, 0.3); }
+            50% { box-shadow: inset 0 0 30px rgba(96, 165, 250, 0.4), 0 0 50px rgba(96, 165, 250, 0.5); }
+        }
+
+        .scan-counter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: 700;
+            display: none;
+            z-index: 10;
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .duplicate-warning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            display: none;
+            z-index: 20;
+            box-shadow: 0 10px 40px rgba(239, 68, 68, 0.5);
+            animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            white-space: nowrap;
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .status-bar {
+            background: #1e293b;
+            padding: 12px 18px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 14px;
+            color: #94a3b8;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            animation: slideUp 0.6s ease-out 0.3s both;
+        }
+
+        .status-bar.success {
+            background: #1e3a2a;
+            color: #34d399;
+        }
+
+        .status-bar.error {
+            background: #3a1f2a;
+            color: #f87171;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+            animation: slideUp 0.6s ease-out 0.4s both;
+        }
+
+        .stat-box {
+            background: #1e293b;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid #334155;
+            transition: all 0.3s ease;
+        }
+
+        .stat-box:hover {
+            border-color: #60a5fa;
+            background: #334155;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #60a5fa;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+            animation: slideUp 0.6s ease-out 0.5s both;
+        }
+
+        .button-group.full {
+            grid-template-columns: 1fr;
+        }
+
+        button {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: left 0.3s ease;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            grid-column: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: white;
+            grid-column: 2;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
+        }
+
+        .btn-copy {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .btn-copy:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-clear {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .btn-clear:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 16px;
+            border: 2px solid #1e293b;
+            border-radius: 12px;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            animation: slideUp 0.6s ease-out 0.6s both;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: #334155;
+        }
+
+        .footer {
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+            margin-top: 20px;
+            animation: slideUp 0.6s ease-out 0.7s both;
+        }
+
+        .footer a {
+            color: #60a5fa;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: #93c5fd;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #10b981;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+            animation: slideIn 0.3s ease-out;
+            z-index: 100;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 24px;
+            }
+
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-secondary {
+                grid-column: 1;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            textarea {
+                min-height: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>QR SCANNER</h1>
+            <p class="subtitle">Nguyễn Mạnh Tuấn</p>
+        </header>
+
+        <div class="input-group">
+            <input type="text" id="saleInput" placeholder="👤 Nhập tên Sale">
+        </div>
+
+        <div class="camera-section">
+            <div class="camera-wrapper">
+                <video id="interactive" class="viewport"></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+                <div id="scan-overlay">
+                    <div class="scan-frame"></div>
+                </div>
+                <div class="scan-counter" id="scan-counter">0</div>
+                <div class="duplicate-warning" id="duplicate-warning">🔴 MÃ QR ĐÃ TỒN TẠI</div>
+            </div>
+        </div>
+
+        <div class="status-bar" id="status-bar"></div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number" id="count">0</div>
+                <div class="stat-label">Tổng Scan</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="scan-type">-</div>
+                <div class="stat-label">Loại Mã</div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-primary" id="startBtn" onclick="startScanner()">▶ START</button>
+            <button class="btn-secondary" id="stopBtn" onclick="stopScanner()" disabled>⏹ STOP</button>
+        </div>
+
+        <div class="button-group full">
+            <button class="btn-copy" onclick="copyList()">📋 COPY DANH SÁCH</button>
+            <button class="btn-clear" onclick="clearList()">🗑️ XÓA TOÀN BỘ</button>
+        </div>
+
+        <textarea id="resultList" placeholder="📋 DANH SÁCH MÃ QR ĐÃ QUÉT..."></textarea>
+
+        <div class="footer">
+            <p>⚡ QuaggaJS Scanner | Được phát triển bởi <a href="#">Nguyễn Mạnh Tuấn</a></p>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6Uwfr6KdbZs9hXfBV2gBb0cmHCCdgjicUAa14MRzhJDUY_MtKLPmA0QKm9BEYKXEw/exec";
+        
+        let scannedList = [];
+        let scannerRunning = false;
+        let lastScanTime = 0;
+        let lastDetectedFormat = "-";
+
+        function startScanner() {
+            const sale = document.getElementById("saleInput").value.trim();
+            if (!sale) {
+                showStatus("⚠️ Vui lòng nhập tên Sale", "error");
+                return;
+            }
+
+            if (scannerRunning) return;
+
+            try {
+                Quagga.init({
+                    inputStream: {
+                        type: "LiveStream",
+                        constraints: {
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 },
+                            facingMode: "environment",
+                            aspectRatio: { ideal: 16 / 9 }
+                        },
+                        target: document.querySelector("#interactive")
+                    },
+                    decoder: {
+                        workers: 2,
+                        debug: false,
+                        multiple: false,
+                        formats: [
+                            "code_128",
+                            "code_39",
+                            "code_39_vin",
+                            "code_93",
+                            "ean",
+                            "ean_8",
+                            "ean_13",
+                            "upc",
+                            "upc_e",
+                            "qr",
+                            "databar",
+                            "codabar",
+                            "i2of5",
+                            "2of5",
+                            "int2of5"
+                        ]
+                    },
+                    locator: {
+                        patchSize: "medium",
+                        halfSample: true
+                    },
+                    numOfWorkers: 4,
+                    frequency: 10,
+                    area: {
+                        top: "20%",
+                        left: "20%",
+                        right: "20%",
+                        bottom: "20%"
+                    }
+                }, function (err) {
+                    if (err) {
+                        console.error(err);
+                        showStatus("❌ Lỗi khởi tạo camera: " + err.message, "error");
+                        return;
+                    }
+
+                    Quagga.start();
+                    scannerRunning = true;
+                    document.getElementById("startBtn").disabled = true;
+                    document.getElementById("stopBtn").disabled = false;
+                    document.getElementById("scan-counter").style.display = "block";
+                    showStatus("✅ Camera đã khởi động", "success");
+
+                    Quagga.onDetected(onScanSuccess);
+                });
+            } catch (err) {
+                console.error(err);
+                showStatus("❌ Lỗi: " + err.message, "error");
+            }
+        }
+
+        function onScanSuccess(result) {
+            const now = Date.now();
+            if (now - lastScanTime < 1000) {
+                return;
+            }
+
+            const decodedText = result.codeResult.code;
+            const format = result.codeResult.format || "unknown";
+            lastDetectedFormat = format.toUpperCase();
+
+            if (scannedList.includes(decodedText)) {
+                showDuplicateWarning();
+                navigator.vibrate?.([200, 100, 200]);
+                return;
+            }
+
+            lastScanTime = now;
+            scannedList.push(decodedText);
+            updateUI();
+            flashEffect();
+            navigator.vibrate?.(100);
+
+            showStatus(`✅ Đã quét: ${decodedText}`, "success");
+
+            let scanType = "BARCODE";
+            if (format.includes("qr") || format === "qr_code") {
+                scanType = "QR";
+            }
+
+            autoSendToSheet(decodedText, scanType);
+        }
+
+        function updateUI() {
+            document.getElementById("resultList").value = scannedList.join("\n");
+            document.getElementById("count").innerText = scannedList.length;
+            document.getElementById("scan-counter").innerText = scannedList.length;
+            document.getElementById("scan-type").innerText = lastDetectedFormat;
+        }
+
+        async function autoSendToSheet(code, type) {
+            try {
+                const sale = document.getElementById("saleInput").value.trim();
+                if (!sale) return;
+
+                const url = GOOGLE_SCRIPT_URL +
+                    "?sale=" + encodeURIComponent(sale) +
+                    "&code=" + encodeURIComponent(code) +
+                    "&type=" + encodeURIComponent(type);
+
+                await fetch(url, {
+                    method: "GET",
+                    mode: "no-cors",
+                    cache: "no-cache"
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function stopScanner() {
+            Quagga.stop();
+            Quagga.offDetected(onScanSuccess);
+            scannerRunning = false;
+            document.getElementById("startBtn").disabled = false;
+            document.getElementById("stopBtn").disabled = true;
+            document.getElementById("scan-counter").style.display = "none";
+            showStatus("⏹️ Camera đã dừng", "");
+        }
+
+        function copyList() {
+            const text = document.getElementById("resultList").value;
+            if (!text) {
+                showStatus("⚠️ Chưa có dữ liệu để copy", "error");
+                return;
+            }
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("📋 Đã copy danh sách!");
+            });
+        }
+
+        function clearList() {
+            if (confirm("⚠️ Xác nhận xóa toàn bộ dữ liệu?")) {
+                scannedList = [];
+                lastDetectedFormat = "-";
+                document.getElementById("resultList").value = "";
+                document.getElementById("count").innerText = 0;
+                document.getElementById("scan-counter").innerText = 0;
+                document.getElementById("scan-type").innerText = "-";
+                showStatus("🗑️ Đã xóa toàn bộ dữ liệu", "");
+            }
+        }
+
+        function showStatus(text, type = "") {
+            const statusBar = document.getElementById("status-bar");
+            statusBar.innerText = text;
+            statusBar.className = "status-bar " + type;
+        }
+
+        function showDuplicateWarning() {
+            const warning = document.getElementById("duplicate-warning");
+            warning.style.display = "block";
+            setTimeout(() => {
+                warning.style.display = "none";
+            }, 1500);
+        }
+
+        function flashEffect() {
+            document.body.style.opacity = "0.8";
+            setTimeout(() => {
+                document.body.style.opacity = "1";
+            }, 100);
+        }
+
+        function showToast(message) {
+            const toast = document.createElement("div");
+            toast.className = "toast";
+            toast.innerText = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 2000);
+        }
+
+        // Kiểm tra input khi nhập
+        document.getElementById("saleInput").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                startScanner();
+            }
+        });
+    </script>
+</body>
 </html>
