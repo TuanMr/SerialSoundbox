@@ -180,6 +180,7 @@
  let html5QrCode = null;
  let scannerRunning = false;
  let lastScanTime = 0;
+ let processingCodes = new Set(); // ✅ Tránh xử lý trùng lặp cùng lúc
 
  async function startScanner(){
      const sale = document.getElementById("saleInput").value.trim();
@@ -199,11 +200,11 @@
                  }
              },
              {
-                 fps:30,
+                 fps:60, // ✅ TĂNG TỰ 30 LÊN 60 - Quét nhanh hơn
                  qrbox:function(w,h){
                      return{
-                         width:Math.floor(w * 0.9),
-                         height:Math.floor(h * 0.32)
+                         width:Math.floor(w * 0.98), // ✅ TĂNG TỰ 0.9 LÊN 0.98 - Quét rộng hơn
+                         height:Math.floor(h * 0.85) // ✅ TĂNG TỰ 0.32 LÊN 0.85 - Quét cao hơn để bắt barcode nằm ngang
                      };
                  },
                  aspectRatio:1.777,
@@ -251,15 +252,25 @@
              },
              async function(decodedText, decodedResult){
                  const now = Date.now();
-                 if(now - lastScanTime < 1000){
+                 
+                 // ✅ GIẢM THỜI GIAN CHỜ TỪ 1000ms XUỐNG 500ms - Quét nhanh hơn
+                 if(now - lastScanTime < 500){
                      return;
                  }
+                 
+                 // ✅ TRÁNH XỬ LÝ CÙNG MÃ NHIỀU LẦN
+                 if(processingCodes.has(decodedText)){
+                     return;
+                 }
+                 processingCodes.add(decodedText);
+
                  lastScanTime = now;
 
                  // ✅ KIỂM TRA XEM QR ĐÃ TỒN TẠI HAY CHƯA
                  if(scannedList.includes(decodedText)){
                      showDuplicateWarning();
                      navigator.vibrate?.([200,100,200]);
+                     processingCodes.delete(decodedText); // ✅ Xoá khỏi set xử lý
                      return; // ❌ DỪNG HẸN - KHÔNG GỬI GOOGLE SHEET
                  }
 
@@ -279,6 +290,7 @@
 
                  // ✅ CHỈ GỬI GOOGLE SHEET KHI QR CHƯA TỒN TẠI
                  await autoSendToSheet(decodedText, scanType);
+                 processingCodes.delete(decodedText); // ✅ Xoá khỏi set xử lý sau khi xong
              }
          );
 
@@ -322,6 +334,7 @@
          await html5QrCode.clear();
          scannerRunning = false;
          document.getElementById("scan-counter").style.display = "none";
+         processingCodes.clear(); // ✅ Clear set khi dừng
      }
  }
 
@@ -335,6 +348,7 @@
      document.getElementById("resultList").value = "";
      document.getElementById("count").innerText = 0;
      document.getElementById("scan-counter").innerText = 0;
+     processingCodes.clear(); // ✅ Clear set khi xóa danh sách
      setStatus("");
  }
 
