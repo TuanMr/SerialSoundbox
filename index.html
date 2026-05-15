@@ -1,27 +1,33 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>NGUYỄN MẠNH TUẤN QR SCAN</title>
 
-<!-- QUAGGA JS -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+<!-- ZXING -->
+<script src="https://unpkg.com/@zxing/library@latest"></script>
 
 <style>
+
 body{
     margin:0;
     padding:15px;
     background:#f5f5f5;
     font-family:Arial,sans-serif;
 }
+
 .container{
     max-width:600px;
     margin:auto;
 }
+
 h2{
     text-align:center;
 }
+
 input{
     width:100%;
     padding:14px;
@@ -31,9 +37,11 @@ input{
     box-sizing:border-box;
     font-size:16px;
 }
+
 #reader-wrapper{
     position:relative;
 }
+
 #reader{
     width:100%;
     min-height:360px;
@@ -43,28 +51,36 @@ input{
     position:relative;
 }
 
-/* VIDEO */
 #reader video{
-    width:100% !important;
-    height:auto !important;
+    width:100%;
+    height:100%;
     object-fit:cover;
     border-radius:15px;
 }
 
-/* CANVAS */
-#reader canvas{
+/* KHUNG SCAN */
+
+#scan-area{
     position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
+    top:50%;
+    left:50%;
+    width:88%;
+    height:32%;
+    border:4px solid yellow;
+    border-radius:18px;
+    transform:translate(-50%, -50%);
+    z-index:50;
+    pointer-events:none;
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.35);
 }
+
+/* TAP FOCUS */
 
 #focus-box{
     position:absolute;
     width:100px;
     height:100px;
-    border:3px solid yellow;
+    border:3px solid #00ff00;
     border-radius:12px;
     display:none;
     transform:translate(-50%,-50%);
@@ -72,12 +88,13 @@ input{
     z-index:100;
 }
 
-/* Bộ đếm */
+/* COUNTER */
+
 #scan-counter{
     position:absolute;
     top:20px;
     right:20px;
-    background:rgba(255, 0, 0, 0.85);
+    background:rgba(255,0,0,0.85);
     color:white;
     padding:15px 25px;
     border-radius:12px;
@@ -91,13 +108,14 @@ input{
     text-align:center;
 }
 
-/* Warning */
+/* WARNING */
+
 #overlay-warning{
     position:absolute;
     top:50%;
     left:50%;
     transform:translate(-50%, -50%);
-    background:rgba(255, 0, 0, 0.9);
+    background:rgba(255,0,0,0.9);
     color:white;
     padding:20px 30px;
     border-radius:15px;
@@ -134,14 +152,17 @@ button{
     background:#28a745;
     color:white;
 }
+
 .stop{
     background:#ff9800;
     color:white;
 }
+
 .copy{
     background:#007bff;
     color:white;
 }
+
 .clear{
     background:#dc3545;
     color:white;
@@ -177,6 +198,7 @@ textarea{
     color:#666;
     font-size:14px;
 }
+
 </style>
 </head>
 
@@ -191,6 +213,8 @@ textarea{
 <div id="reader-wrapper">
 
     <div id="reader"></div>
+
+    <div id="scan-area"></div>
 
     <div id="focus-box"></div>
 
@@ -241,8 +265,16 @@ const GOOGLE_SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbz6Uwfr6KdbZs9hXfBV2gBb0cmHCCdgjicUAa14MRzhJDUY_MtKLPmA0QKm9BEYKXEw/exec";
 
 let scannedList = [];
+
 let scannerRunning = false;
+
 let lastScanTime = 0;
+
+let codeReader = null;
+
+let selectedDeviceId = null;
+
+/* START */
 
 async function startScanner(){
 
@@ -250,7 +282,9 @@ async function startScanner(){
     document.getElementById("saleInput").value.trim();
 
     if(!sale){
+
         alert("BẠN CHƯA NHẬP TÊN SALE");
+
         return;
     }
 
@@ -260,128 +294,99 @@ async function startScanner(){
 
     try{
 
-        Quagga.init({
+        codeReader =
+        new ZXing.BrowserMultiFormatReader();
 
-            inputStream:{
-                type:"LiveStream",
+        const videoInputDevices =
+        await codeReader.listVideoInputDevices();
 
-                target:document.querySelector("#reader"),
+        /* CAMERA SAU */
 
-                constraints:{
-                    facingMode:"environment",
-                    width:{
-                        ideal:1920
-                    },
-                    height:{
-                        ideal:1080
+        if(videoInputDevices.length > 0){
+
+            selectedDeviceId =
+            videoInputDevices[videoInputDevices.length - 1].deviceId;
+        }
+
+        await codeReader.decodeFromVideoDevice(
+
+            selectedDeviceId,
+
+            'reader',
+
+            async(result, err, controls)=>{
+
+                if(result){
+
+                    const now = Date.now();
+
+                    if(now - lastScanTime < 1000){
+                        return;
                     }
-                },
 
-                area:{
-                    top:"20%",
-                    right:"5%",
-                    left:"5%",
-                    bottom:"20%"
+                    lastScanTime = now;
+
+                    const code = result.text;
+
+                    if(!code){
+                        return;
+                    }
+
+                    /* CHECK DUPLICATE */
+
+                    if(scannedList.includes(code)){
+
+                        showDuplicateWarning();
+
+                        navigator.vibrate?.([200,100,200]);
+
+                        return;
+                    }
+
+                    /* ADD */
+
+                    scannedList.push(code);
+
+                    document.getElementById("resultList").value =
+                    scannedList.join("\n");
+
+                    document.getElementById("count").innerText =
+                    scannedList.length;
+
+                    document.getElementById("scan-counter").innerText =
+                    scannedList.length;
+
+                    navigator.vibrate?.(100);
+
+                    flashEffect();
+
+                    /* TYPE */
+
+                    let scanType = "BARCODE";
+
+                    if(
+                        result.getBarcodeFormat().toString()
+                        .includes("QR_CODE")
+                    ){
+                        scanType = "QR";
+                    }
+
+                    await autoSendToSheet(code, scanType);
+
                 }
-            },
 
-            locator:{
-                patchSize:"medium",
-                halfSample:false
-            },
-
-            numOfWorkers:navigator.hardwareConcurrency || 4,
-
-            frequency:10,
-
-            decoder:{
-                readers:[
-
-                    "code_128_reader",
-                    "code_39_reader",
-                    "code_93_reader",
-                    "ean_reader",
-                    "ean_8_reader",
-                    "upc_reader",
-                    "upc_e_reader",
-                    "codabar_reader",
-                    "i2of5_reader"
-
-                ]
-            },
-
-            locate:true
-
-        }, function(err){
-
-            if(err){
-                console.error(err);
-                alert("Lỗi camera:\n" + err);
-                return;
             }
 
-            Quagga.start();
+        );
 
-            scannerRunning = true;
+        scannerRunning = true;
 
-            document.getElementById("scan-counter")
-            .style.display = "block";
+        document.getElementById("scan-counter")
+        .style.display = "block";
 
-            setupTapFocus();
+        setupTapFocus();
 
-            setStatus("Scanner đã khởi động");
-
-        });
-
-        /* DETECT */
-
-        Quagga.onDetected(async function(result){
-
-            const now = Date.now();
-
-            if(now - lastScanTime < 1000){
-                return;
-            }
-
-            lastScanTime = now;
-
-            const code = result.codeResult.code;
-
-            if(!code){
-                return;
-            }
-
-            /* CHECK DUPLICATE */
-
-            if(scannedList.includes(code)){
-
-                showDuplicateWarning();
-
-                navigator.vibrate?.([200,100,200]);
-
-                return;
-            }
-
-            /* ADD */
-
-            scannedList.push(code);
-
-            document.getElementById("resultList").value =
-            scannedList.join("\n");
-
-            document.getElementById("count").innerText =
-            scannedList.length;
-
-            document.getElementById("scan-counter").innerText =
-            scannedList.length;
-
-            navigator.vibrate?.(100);
-
-            flashEffect();
-
-            await autoSendToSheet(code, "BARCODE");
-
-        });
+        setStatus("Scanner đã khởi động");
 
     }catch(err){
 
@@ -390,13 +395,19 @@ async function startScanner(){
         alert("Lỗi camera:\n" + err);
 
     }
+
 }
+
+/* STOP */
 
 async function stopScanner(){
 
-    if(scannerRunning){
+    try{
 
-        Quagga.stop();
+        if(codeReader){
+
+            codeReader.reset();
+        }
 
         scannerRunning = false;
 
@@ -405,8 +416,14 @@ async function stopScanner(){
 
         setStatus("Scanner đã dừng");
 
+    }catch(err){
+
+        console.error(err);
     }
+
 }
+
+/* SEND GOOGLE SHEET */
 
 async function autoSendToSheet(code, type){
 
@@ -431,7 +448,7 @@ async function autoSendToSheet(code, type){
         "&code=" + encodeURIComponent(code) +
         "&type=" + encodeURIComponent(type);
 
-        await fetch(url, {
+        await fetch(url,{
             method:"GET",
             mode:"no-cors",
             cache:"no-cache"
@@ -444,9 +461,11 @@ async function autoSendToSheet(code, type){
         console.error(err);
 
         setStatus("Lỗi gửi dữ liệu");
-
     }
+
 }
+
+/* COPY */
 
 function copyList(){
 
@@ -456,6 +475,8 @@ function copyList(){
 
     alert("Đã copy");
 }
+
+/* CLEAR */
 
 function clearList(){
 
@@ -470,10 +491,14 @@ function clearList(){
     setStatus("");
 }
 
+/* STATUS */
+
 function setStatus(text){
 
     document.getElementById("status").innerText = text;
 }
+
+/* WARNING */
 
 function showDuplicateWarning(){
 
@@ -482,23 +507,27 @@ function showDuplicateWarning(){
 
     overlayWarning.style.display = "block";
 
-    setTimeout(() => {
+    setTimeout(()=>{
 
         overlayWarning.style.display = "none";
 
-    }, 1500);
+    },1500);
 }
+
+/* FLASH */
 
 function flashEffect(){
 
     document.body.style.opacity = "0.9";
 
-    setTimeout(() => {
+    setTimeout(()=>{
 
         document.body.style.opacity = "1";
 
-    }, 100);
+    },100);
 }
+
+/* TAP FOCUS */
 
 function setupTapFocus(){
 
@@ -508,9 +537,10 @@ function setupTapFocus(){
     const focusBox =
     document.getElementById("focus-box");
 
-    wrapper.addEventListener("click", function(e){
+    wrapper.addEventListener("click",function(e){
 
-        const rect = wrapper.getBoundingClientRect();
+        const rect =
+        wrapper.getBoundingClientRect();
 
         const x = e.clientX - rect.left;
 
@@ -522,15 +552,16 @@ function setupTapFocus(){
 
         focusBox.style.display = "block";
 
-        setTimeout(() => {
+        setTimeout(()=>{
 
             focusBox.style.display = "none";
 
-        }, 700);
+        },700);
 
         navigator.vibrate?.(30);
 
     });
+
 }
 
 </script>
