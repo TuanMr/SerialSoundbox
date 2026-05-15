@@ -4,7 +4,8 @@
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
  <title>NGUYỄN MẠNH TUẤN QR SCAN</title>
- <script src="https://unpkg.com/html5-qrcode"></script>
+ <!-- QuaggaJS - Chuyên biệt cho barcode scanning -->
+ <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
  <style>
  body{
      margin:0;
@@ -177,10 +178,8 @@
  <script>
  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6Uwfr6KdbZs9hXfBV2gBb0cmHCCdgjicUAa14MRzhJDUY_MtKLPmA0QKm9BEYKXEw/exec";
  let scannedList = [];
- let html5QrCode = null;
  let scannerRunning = false;
  let lastScanTime = 0;
- let processingCodes = new Set(); // ✅ Tránh xử lý trùng lặp cùng lúc
 
  async function startScanner(){
      const sale = document.getElementById("saleInput").value.trim();
@@ -192,115 +191,120 @@
          return;
      }
      try{
-         html5QrCode = new Html5Qrcode("reader");
-         await html5QrCode.start(
-             {
-                 facingMode:{
-                     ideal:"environment"
+         // ✅ KHỞI ĐỘNG QUAGGAJS
+         Quagga.init({
+             inputStream: {
+                 name: "Live",
+                 type: "LiveStream",
+                 target: document.querySelector('#reader'),
+                 constraints: {
+                     facingMode: "environment",
+                     width: { ideal: 1280 },
+                     height: { ideal: 720 }
                  }
              },
-             {
-                 fps:60, // ✅ TĂNG TỰ 30 LÊN 60 - Quét nhanh hơn
-                 qrbox:function(w,h){
-                     return{
-                         width:Math.floor(w * 0.98), // ✅ TĂNG TỰ 0.9 LÊN 0.98 - Quét rộng hơn
-                         height:Math.floor(h * 0.85) // ✅ TĂNG TỰ 0.32 LÊN 0.85 - Quét cao hơn để bắt barcode nằm ngang
-                     };
-                 },
-                 aspectRatio:1.777,
-                 disableFlip:false,
-                 formatsToSupport:[
-                     Html5QrcodeSupportedFormats.QR_CODE,
-                     Html5QrcodeSupportedFormats.CODE_128,
-                     Html5QrcodeSupportedFormats.CODE_39,
-                     Html5QrcodeSupportedFormats.CODE_93,
-                     Html5QrcodeSupportedFormats.EAN_13,
-                     Html5QrcodeSupportedFormats.EAN_8,
-                     Html5QrcodeSupportedFormats.UPC_A,
-                     Html5QrcodeSupportedFormats.UPC_E,
-                     Html5QrcodeSupportedFormats.ITF,
-                     Html5QrcodeSupportedFormats.MSI,
-                     Html5QrcodeSupportedFormats.CODABAR,
-                     Html5QrcodeSupportedFormats.GS1_DATABAR,
-                     Html5QrcodeSupportedFormats.GS1_DATABAR_EXPANDED,
-                     Html5QrcodeSupportedFormats.DATA_MATRIX,
-                     Html5QrcodeSupportedFormats.AZTEC,
-                     Html5QrcodeSupportedFormats.PDF_417
+             decoder: {
+                 // ✅ CHỈNH HỢP CHO BARCODE CODE_128
+                 readers: [
+                     "code_128_reader",
+                     "ean_reader",
+                     "ean_8_reader",
+                     "code_39_reader",
+                     "code_93_reader",
+                     "upc_reader",
+                     "upc_e_reader"
                  ],
-                 videoConstraints:{
-                     facingMode:{
-                         ideal:"environment"
-                     },
-                     width:{
-                         ideal:1920
-                     },
-                     height:{
-                         ideal:1080
-                     },
-                     advanced:[
-                         {
-                             focusMode:"continuous"
-                         },
-                         {
-                             zoom:1.5
-                         }
-                     ]
-                 },
-                 experimentalFeatures:{
-                     useBarCodeDetectorIfSupported:true
+                 debug: {
+                     showCanvas: false,
+                     showPatternMarkers: false,
+                     showFrequencyBars: false,
+                     showScanline: false
                  }
              },
-             async function(decodedText, decodedResult){
-                 const now = Date.now();
-                 
-                 // ✅ GIẢM THỜI GIAN CHỜ TỪ 1000ms XUỐNG 500ms - Quét nhanh hơn
-                 if(now - lastScanTime < 500){
-                     return;
-                 }
-                 
-                 // ✅ TRÁNH XỬ LÝ CÙNG MÃ NHIỀU LẦN
-                 if(processingCodes.has(decodedText)){
-                     return;
-                 }
-                 processingCodes.add(decodedText);
-
-                 lastScanTime = now;
-
-                 // ✅ KIỂM TRA XEM QR ĐÃ TỒN TẠI HAY CHƯA
-                 if(scannedList.includes(decodedText)){
-                     showDuplicateWarning();
-                     navigator.vibrate?.([200,100,200]);
-                     processingCodes.delete(decodedText); // ✅ Xoá khỏi set xử lý
-                     return; // ❌ DỪNG HẸN - KHÔNG GỬI GOOGLE SHEET
-                 }
-
-                 // ✅ THÊM VÀO DANH SÁCH
-                 scannedList.push(decodedText);
-                 document.getElementById("resultList").value = scannedList.join("\n");
-                 document.getElementById("count").innerText = scannedList.length;
-                 document.getElementById("scan-counter").innerText = scannedList.length;
-                 
-                 navigator.vibrate?.(100);
-                 flashEffect();
-
-                 let scanType = "BARCODE";
-                 if(decodedResult.result.format.formatName === "QR_CODE"){
-                     scanType = "QR";
-                 }
-
-                 // ✅ CHỈ GỬI GOOGLE SHEET KHI QR CHƯA TỒN TẠI
-                 await autoSendToSheet(decodedText, scanType);
-                 processingCodes.delete(decodedText); // ✅ Xoá khỏi set xử lý sau khi xong
+             locator: {
+                 halfSample: true,
+                 patchSize: "medium"
+             },
+             numOfWorkers: 4,
+             frequency: 10
+         }, function(err) {
+             if (err) {
+                 console.log("Initialization error:", err);
+                 alert("Lỗi khởi động camera:\n" + err);
+                 return;
              }
-         );
-
-         scannerRunning = true;
-         // Hiển thị bộ đếm
-         document.getElementById("scan-counter").style.display = "block";
-         setupTapFocus();
+             console.log("✅ Quagga initialized");
+             
+             // ✅ QUAGGA.ONDETECTED - XỬ LÝ KHI PHÁT HIỆN BARCODE
+             Quagga.onDetected(onQuaggaDetected);
+             
+             // ✅ QUAGGA.ONPROCESSED - LOG THÔNG TIN XỬ LÝ
+             Quagga.onProcessed(function(result) {
+                 if(!result) return;
+                 // Có thể xử lý thêm nếu cần
+             });
+             
+             Quagga.start();
+             scannerRunning = true;
+             document.getElementById("scan-counter").style.display = "block";
+             setStatus("Đang quét...");
+         });
      }catch(err){
-         console.error(err);
+         console.error("Fatal error:", err);
          alert("Lỗi camera:\n" + err);
+     }
+ }
+
+ function onQuaggaDetected(result){
+     try{
+         if(!result || !result.codeResult){
+             return;
+         }
+         
+         const decodedText = result.codeResult.code;
+         if(!decodedText || decodedText.trim() === ""){
+             return;
+         }
+         
+         const now = Date.now();
+         if(now - lastScanTime < 1000){
+             return; // ✅ GIỮ NGUYÊN THỜI GIAN CHỜ 1 GIÂY
+         }
+         lastScanTime = now;
+
+         // ✅ KIỂM TRA XEM QR ĐÃ TỒN TẠI HAY CHƯA
+         if(scannedList.includes(decodedText)){
+             console.warn("⚠️ Duplicate:", decodedText);
+             showDuplicateWarning();
+             navigator.vibrate?.([200,100,200]);
+             return; // ❌ DỪNG HẸN - KHÔNG GỬI GOOGLE SHEET
+         }
+
+         // ✅ THÊM VÀO DANH SÁCH
+         scannedList.push(decodedText);
+         document.getElementById("resultList").value = scannedList.join("\n");
+         document.getElementById("count").innerText = scannedList.length;
+         document.getElementById("scan-counter").innerText = scannedList.length;
+         
+         navigator.vibrate?.(100);
+         flashEffect();
+
+         // ✅ XÁC ĐỊNH LOẠI BARCODE
+         let scanType = "BARCODE";
+         if(result.codeResult.format === "qr_code"){
+             scanType = "QR";
+         } else if(result.codeResult.format === "code_128"){
+             scanType = "CODE_128";
+         } else if(result.codeResult.format === "ean_13"){
+             scanType = "EAN_13";
+         }
+
+         console.log("✅ Scan Type:", scanType, "Code:", decodedText);
+
+         // ✅ CHỈ GỬI GOOGLE SHEET KHI QR CHƯA TỒN TẠI
+         autoSendToSheet(decodedText, scanType);
+     }catch(callbackErr){
+         console.error("❌ Error in quagga detected:", callbackErr);
      }
  }
 
@@ -322,19 +326,20 @@
              cache:"no-cache"
          });
          setStatus("Đã gửi: " + code);
+         console.log("✅ Sent to sheet:", code);
      }catch(err){
-         console.error(err);
+         console.error("❌ Send error:", err);
          setStatus("Lỗi gửi dữ liệu");
      }
  }
 
  async function stopScanner(){
-     if(html5QrCode && scannerRunning){
-         await html5QrCode.stop();
-         await html5QrCode.clear();
+     if(scannerRunning){
+         Quagga.stop();
          scannerRunning = false;
          document.getElementById("scan-counter").style.display = "none";
-         processingCodes.clear(); // ✅ Clear set khi dừng
+         setStatus("Đã dừng");
+         console.log("✅ Scanner stopped");
      }
  }
 
@@ -348,8 +353,8 @@
      document.getElementById("resultList").value = "";
      document.getElementById("count").innerText = 0;
      document.getElementById("scan-counter").innerText = 0;
-     processingCodes.clear(); // ✅ Clear set khi xóa danh sách
      setStatus("");
+     console.log("✅ List cleared");
  }
 
  function setStatus(text){
