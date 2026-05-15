@@ -34,7 +34,7 @@
  }
  #reader{
      width:100%;
-     min-height:250px;
+     min-height:360px;
      background:black;
      border-radius:15px;
      overflow:hidden;
@@ -199,12 +199,11 @@
                  target: document.querySelector('#reader'),
                  constraints: {
                      facingMode: "environment",
-                     width: { ideal: 1280 },
-                     height: { ideal: 720 }
+                     width: { ideal: 1920 },
+                     height: { ideal: 1080 }
                  }
              },
              decoder: {
-                 // ✅ CHỈNH HỢP CHO BARCODE CODE_128
                  readers: [
                      "code_128_reader",
                      "ean_reader",
@@ -212,7 +211,8 @@
                      "code_39_reader",
                      "code_93_reader",
                      "upc_reader",
-                     "upc_e_reader"
+                     "upc_e_reader",
+                     "qr_reader"
                  ],
                  debug: {
                      showCanvas: false,
@@ -220,12 +220,6 @@
                      showFrequencyBars: false,
                      showScanline: false
                  }
-             },
-             area: {
-                 top: "25%",
-                 right: "15%",
-                 left: "15%",
-                 bottom: "25%"
              },
              locator: {
                  halfSample: true,
@@ -241,22 +235,15 @@
              }
              console.log("✅ Quagga initialized");
              
-             // ✅ QUAGGA.ONDETECTED - XỬ LÝ KHI PHÁT HIỆN BARCODE
              Quagga.onDetected(onQuaggaDetected);
-             
-             // ✅ QUAGGA.ONPROCESSED - LOG THÔNG TIN XỬ LÝ
-             Quagga.onProcessed(function(result) {
-                 if(!result) return;
-                 // Có thể xử lý thêm nếu cần
-             });
-             
              Quagga.start();
              scannerRunning = true;
              document.getElementById("scan-counter").style.display = "block";
              setStatus("Đang quét...");
+             setupTapFocus();
          });
      }catch(err){
-         console.error("Fatal error:", err);
+         console.error(err);
          alert("Lỗi camera:\n" + err);
      }
  }
@@ -274,13 +261,12 @@
          
          const now = Date.now();
          if(now - lastScanTime < 1000){
-             return; // ✅ GIỮ NGUYÊN THỜI GIAN CHỜ 1 GIÂY
+             return;
          }
          lastScanTime = now;
 
          // ✅ KIỂM TRA XEM QR ĐÃ TỒN TẠI HAY CHƯA
          if(scannedList.includes(decodedText)){
-             console.warn("⚠️ Duplicate:", decodedText);
              showDuplicateWarning();
              navigator.vibrate?.([200,100,200]);
              return; // ❌ DỪNG HẸN - KHÔNG GỬI GOOGLE SHEET
@@ -295,7 +281,6 @@
          navigator.vibrate?.(100);
          flashEffect();
 
-         // ✅ XÁC ĐỊNH LOẠI BARCODE
          let scanType = "BARCODE";
          if(result.codeResult.format === "qr_code"){
              scanType = "QR";
@@ -304,8 +289,6 @@
          } else if(result.codeResult.format === "ean_13"){
              scanType = "EAN_13";
          }
-
-         console.log("✅ Scan Type:", scanType, "Code:", decodedText);
 
          // ✅ CHỈ GỬI GOOGLE SHEET KHI QR CHƯA TỒN TẠI
          autoSendToSheet(decodedText, scanType);
@@ -332,9 +315,8 @@
              cache:"no-cache"
          });
          setStatus("Đã gửi: " + code);
-         console.log("✅ Sent to sheet:", code);
      }catch(err){
-         console.error("❌ Send error:", err);
+         console.error(err);
          setStatus("Lỗi gửi dữ liệu");
      }
  }
@@ -344,8 +326,6 @@
          Quagga.stop();
          scannerRunning = false;
          document.getElementById("scan-counter").style.display = "none";
-         setStatus("Đã dừng");
-         console.log("✅ Scanner stopped");
      }
  }
 
@@ -360,7 +340,6 @@
      document.getElementById("count").innerText = 0;
      document.getElementById("scan-counter").innerText = 0;
      setStatus("");
-     console.log("✅ List cleared");
  }
 
  function setStatus(text){
