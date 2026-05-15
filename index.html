@@ -1,602 +1,367 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#0f172a">
-    <title>QR SCANNER - Nguyễn Mạnh Tuấn</title>
-    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.10.2/dist/quagga.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        html, body {
-            width: 100%;
-            height: 100%;
-        }
-
-        body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #e2e8f0;
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: transparent;
-            overflow-x: hidden;
-        }
-
-        .app {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            padding: 12px;
-        }
-
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 15px;
-        }
-
-        h1 {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 2px;
-            background: linear-gradient(135deg, #60a5fa, #34d399);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .subtitle {
-            font-size: 12px;
-            color: #94a3b8;
-        }
-
-        .input-section {
-            margin-bottom: 12px;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 12px 14px;
-            border: 2px solid #1e293b;
-            border-radius: 10px;
-            background: #1e293b;
-            color: #e2e8f0;
-            font-size: 16px;
-            -webkit-appearance: none;
-            appearance: none;
-            transition: all 0.3s ease;
-        }
-
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #60a5fa;
-            background: #334155;
-        }
-
-        .camera-section {
-            flex: 1;
-            margin-bottom: 12px;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
-
-        .camera-wrapper {
-            position: relative;
-            background: #000;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 2px solid #1e293b;
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        }
-
-        #interactive {
-            width: 100%;
-            height: 100%;
-            display: block;
-            object-fit: cover;
-        }
-
-        canvas {
-            display: none !important;
-        }
-
-        #scan-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 5;
-        }
-
-        .scan-frame {
-            width: 80%;
-            max-width: 300px;
-            aspect-ratio: 1.5;
-            border: 3px solid #60a5fa;
-            border-radius: 10px;
-            box-shadow: inset 0 0 20px rgba(96, 165, 250, 0.2);
-            animation: pulse-frame 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-frame {
-            0%, 100% { box-shadow: inset 0 0 20px rgba(96, 165, 250, 0.2), 0 0 30px rgba(96, 165, 250, 0.3); }
-            50% { box-shadow: inset 0 0 30px rgba(96, 165, 250, 0.4), 0 0 50px rgba(96, 165, 250, 0.5); }
-        }
-
-        .scan-counter {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: 700;
-            display: none;
-            z-index: 10;
-            min-width: 50px;
-            text-align: center;
-        }
-
-        .duplicate-warning {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-            padding: 16px 24px;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 700;
-            display: none;
-            z-index: 20;
-            white-space: nowrap;
-        }
-
-        .status-bar {
-            background: #1e293b;
-            padding: 10px 12px;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 12px;
-            color: #94a3b8;
-            min-height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 12px;
-        }
-
-        .status-bar.success {
-            background: #1e3a2a;
-            color: #34d399;
-        }
-
-        .status-bar.error {
-            background: #3a1f2a;
-            color: #f87171;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .stat-box {
-            background: #1e293b;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid #334155;
-        }
-
-        .stat-number {
-            font-size: 20px;
-            font-weight: 700;
-            color: #60a5fa;
-            margin-bottom: 2px;
-        }
-
-        .stat-label {
-            font-size: 10px;
-            color: #94a3b8;
-            text-transform: uppercase;
-        }
-
-        .button-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .button-section.full {
-            grid-template-columns: 1fr 1fr;
-        }
-
-        button {
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-            min-height: 44px;
-            -webkit-appearance: none;
-            appearance: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-        }
-
-        .btn-primary:active {
-            opacity: 0.8;
-        }
-
-        .btn-secondary {
-            background: linear-gradient(135deg, #f97316, #ea580c);
-            color: white;
-        }
-
-        .btn-secondary:active {
-            opacity: 0.8;
-        }
-
-        .btn-copy {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-        }
-
-        .btn-clear {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        textarea {
-            width: 100%;
-            min-height: 100px;
-            padding: 10px;
-            border: 2px solid #1e293b;
-            border-radius: 8px;
-            background: #1e293b;
-            color: #e2e8f0;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            resize: vertical;
-            -webkit-appearance: none;
-            appearance: none;
-            margin-bottom: 10px;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: #60a5fa;
-        }
-
-        .footer {
-            text-align: center;
-            color: #64748b;
-            font-size: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #1e293b;
-        }
-
-        @media (max-height: 700px) {
-            .camera-section {
-                min-height: 200px;
-            }
-
-            textarea {
-                min-height: 80px;
-            }
-
-            h1 {
-                font-size: 20px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="app">
-        <div class="container">
-            <header>
-                <h1>📱 QR SCANNER</h1>
-                <p class="subtitle">Nguyễn Mạnh Tuấn</p>
-            </header>
-
-            <div class="input-section">
-                <input type="text" id="saleInput" placeholder="👤 Tên Sale">
-            </div>
-
-            <div class="camera-section">
-                <div class="camera-wrapper">
-                    <video id="interactive" playsinline></video>
-                    <canvas id="canvas"></canvas>
-                    <div id="scan-overlay">
-                        <div class="scan-frame"></div>
-                    </div>
-                    <div class="scan-counter" id="scan-counter">0</div>
-                    <div class="duplicate-warning" id="duplicate-warning">MÃ ĐÃ TỒN TẠI</div>
-                </div>
-            </div>
-
-            <div class="status-bar" id="status-bar">Chọn Sale rồi nhấn START</div>
-
-            <div class="stats">
-                <div class="stat-box">
-                    <div class="stat-number" id="count">0</div>
-                    <div class="stat-label">Tổng</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-number" id="scan-type">-</div>
-                    <div class="stat-label">Loại</div>
-                </div>
-            </div>
-
-            <div class="button-section">
-                <button class="btn-primary" id="startBtn" onclick="startScanner()">▶ START</button>
-                <button class="btn-secondary" id="stopBtn" onclick="stopScanner()" disabled>⏹ STOP</button>
-            </div>
-
-            <div class="button-section full">
-                <button class="btn-copy" onclick="copyList()">📋 COPY</button>
-                <button class="btn-clear" onclick="clearList()">🗑️ XÓA</button>
-            </div>
-
-            <textarea id="resultList" placeholder="Mã QR sẽ hiển thị ở đây..."></textarea>
-        </div>
-
-        <div class="footer">
-            ⚡ QuaggaJS v1.10.2 | Mobile Optimized
-        </div>
-    </div>
-
-    <script>
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6Uwfr6KdbZs9hXfBV2gBb0cmHCCdgjicUAa14MRzhJDUY_MtKLPmA0QKm9BEYKXEw/exec";
-        
-        let scannedList = [];
-        let scannerRunning = false;
-        let lastScanTime = 0;
-        let lastDetectedFormat = "-";
-
-        function startScanner() {
-            const sale = document.getElementById("saleInput").value.trim();
-            if (!sale) {
-                showStatus("⚠️ Nhập tên Sale", "error");
-                return;
-            }
-
-            if (scannerRunning) return;
-
-            showStatus("⏳ Khởi động...", "");
-            document.getElementById("startBtn").disabled = true;
-
-            try {
-                // Dừng nếu đã chạy
-                if (Quagga.isRunning()) {
-                    Quagga.stop();
-                }
-
-                Quagga.init({
-                    inputStream: {
-                        type: "LiveStream",
-                        constraints: {
-                            width: { min: 640, ideal: 1280, max: 1920 },
-                            height: { min: 480, ideal: 720, max: 1080 },
-                            facingMode: "environment",
-                            advanced: [
-                                { focusMode: "continuous" }
-                            ]
-                        },
-                        target: "#interactive"
-                    },
-                    decoder: {
-                        workers: 2,
-                        debug: false,
-                        multiple: false,
-                        formats: ["ean_13", "ean_8", "code_128", "code_39", "upc_a", "upc_e", "qr"]
-                    },
-                    locator: {
-                        patchSize: "medium",
-                        halfSample: true
-                    },
-                    numOfWorkers: 2,
-                    frequency: 15
-                }, function (err) {
-                    if (err) {
-                        console.error("Init error:", err);
-                        showStatus("❌ Lỗi: " + (err.message || JSON.stringify(err)), "error");
-                        document.getElementById("startBtn").disabled = false;
-                        return;
-                    }
-
-                    try {
-                        Quagga.start();
-                        scannerRunning = true;
-                        document.getElementById("startBtn").disabled = true;
-                        document.getElementById("stopBtn").disabled = false;
-                        document.getElementById("scan-counter").style.display = "block";
-                        showStatus("✅ Camera sẵn sàng", "success");
-
-                        Quagga.onDetected(onScanSuccess);
-                    } catch (err) {
-                        console.error("Start error:", err);
-                        showStatus("❌ Lỗi khởi động", "error");
-                        document.getElementById("startBtn").disabled = false;
-                    }
-                });
-            } catch (err) {
-                console.error("Error:", err);
-                showStatus("❌ Lỗi: " + err.message, "error");
-                document.getElementById("startBtn").disabled = false;
-            }
-        }
-
-        function onScanSuccess(result) {
-            if (!scannerRunning) return;
-
-            const now = Date.now();
-            if (now - lastScanTime < 800) return;
-
-            try {
-                const code = result.codeResult.code;
-                const format = result.codeResult.format || "unknown";
-
-                if (!code) return;
-
-                lastDetectedFormat = format.toUpperCase();
-
-                if (scannedList.includes(code)) {
-                    showDuplicate();
-                    vibrate([200, 100, 200]);
-                    return;
-                }
-
-                lastScanTime = now;
-                scannedList.push(code);
-                updateUI();
-                vibrate(100);
-
-                showStatus(`✅ ${code}`, "success");
-
-                let type = "BARCODE";
-                if (format && format.toLowerCase().includes("qr")) {
-                    type = "QR";
-                }
-
-                sendToSheet(code, type);
-            } catch (err) {
-                console.error("Scan error:", err);
-            }
-        }
-
-        function updateUI() {
-            document.getElementById("resultList").value = scannedList.join("\n");
-            document.getElementById("count").innerText = scannedList.length;
-            document.getElementById("scan-counter").innerText = scannedList.length;
-            document.getElementById("scan-type").innerText = lastDetectedFormat;
-        }
-
-        async function sendToSheet(code, type) {
-            try {
-                const sale = document.getElementById("saleInput").value.trim();
-                const url = GOOGLE_SCRIPT_URL + 
-                    "?sale=" + encodeURIComponent(sale) +
-                    "&code=" + encodeURIComponent(code) +
-                    "&type=" + encodeURIComponent(type);
-
-                fetch(url, { method: "GET", mode: "no-cors" }).catch(() => {});
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        function stopScanner() {
-            try {
-                if (Quagga.isRunning()) {
-                    Quagga.stop();
-                }
-                scannerRunning = false;
-                document.getElementById("startBtn").disabled = false;
-                document.getElementById("stopBtn").disabled = true;
-                document.getElementById("scan-counter").style.display = "none";
-                showStatus("⏹️ Đã dừng", "");
-            } catch (err) {
-                console.error(err);
-            }
-        }
-
-        function copyList() {
-            const text = document.getElementById("resultList").value;
-            if (!text) {
-                showStatus("⚠️ Trống", "error");
-                return;
-            }
-            navigator.clipboard.writeText(text);
-            showStatus("✅ Đã copy", "success");
-        }
-
-        function clearList() {
-            if (confirm("Xóa toàn bộ?")) {
-                scannedList = [];
-                lastDetectedFormat = "-";
-                document.getElementById("resultList").value = "";
-                document.getElementById("count").innerText = 0;
-                document.getElementById("scan-type").innerText = "-";
-                document.getElementById("scan-counter").innerText = 0;
-                showStatus("🗑️ Đã xóa", "");
-            }
-        }
-
-        function showStatus(text, type = "") {
-            const bar = document.getElementById("status-bar");
-            bar.innerText = text;
-            bar.className = "status-bar " + type;
-        }
-
-        function showDuplicate() {
-            const el = document.getElementById("duplicate-warning");
-            el.style.display = "block";
-            setTimeout(() => el.style.display = "none", 1200);
-        }
-
-        function vibrate(pattern) {
-            if (navigator.vibrate) {
-                navigator.vibrate(pattern);
-            }
-        }
-
-        document.getElementById("saleInput").addEventListener("keypress", (e) => {
-            if (e.key === "Enter") startScanner();
-        });
-
-        // Log trang load
-        window.addEventListener("load", () => {
-            console.log("Page loaded - QuaggaJS ready");
-            showStatus("Sẵn sàng", "");
-        });
-    </script>
-</body>
+ <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>NGUYỄN MẠNH TUẤN QR SCAN</title>
+ <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+ <style>
+ body{
+     margin:0;
+     padding:15px;
+     background:#f5f5f5;
+     font-family:Arial,sans-serif;
+ }
+ .container{
+     max-width:600px;
+     margin:auto;
+ }
+ h2{
+     text-align:center;
+ }
+ input{
+     width:100%;
+     padding:14px;
+     margin-bottom:15px;
+     border-radius:12px;
+     border:1px solid #ccc;
+     box-sizing:border-box;
+     font-size:16px;
+ }
+ #reader-wrapper{
+     position:relative;
+ }
+ #reader{
+     width:100%;
+     min-height:360px;
+     background:black;
+     border-radius:15px;
+     overflow:hidden;
+ }
+ #focus-box{
+     position:absolute;
+     width:100px;
+     height:100px;
+     border:3px solid yellow;
+     border-radius:12px;
+     display:none;
+     transform:translate(-50%,-50%);
+     pointer-events:none;
+ }
+
+ /* Bộ đếm QR hiển thị trên camera */
+ #scan-counter{
+     position:absolute;
+     top:20px;
+     right:20px;
+     background:rgba(255, 0, 0, 0.85);
+     color:white;
+     padding:15px 25px;
+     border-radius:12px;
+     font-size:28px;
+     font-weight:bold;
+     display:none;
+     pointer-events:none;
+     z-index:100;
+     box-shadow:0 4px 15px rgba(0,0,0,0.5);
+     min-width:80px;
+     text-align:center;
+ }
+
+ /* Thông báo trùng lặp - hiển thị trên camera */
+ #overlay-warning{
+     position:absolute;
+     top:50%;
+     left:50%;
+     transform:translate(-50%, -50%);
+     background:rgba(255, 0, 0, 0.9);
+     color:white;
+     padding:20px 30px;
+     border-radius:15px;
+     font-size:24px;
+     font-weight:bold;
+     display:none;
+     pointer-events:none;
+     z-index:100;
+     box-shadow:0 4px 15px rgba(0,0,0,0.5);
+     animation:pulse 0.5s ease-in-out;
+ }
+ @keyframes pulse {
+     0%, 100% { transform: translate(-50%, -50%) scale(1); }
+     50% { transform: translate(-50%, -50%) scale(1.1); }
+ }
+
+ button{
+     width:100%;
+     padding:15px;
+     margin-top:10px;
+     border:none;
+     border-radius:12px;
+     font-size:16px;
+     font-weight:bold;
+ }
+ .start{
+     background:#28a745;
+     color:white;
+ }
+ .stop{
+     background:#ff9800;
+     color:white;
+ }
+ .copy{
+     background:#007bff;
+     color:white;
+ }
+ .clear{
+     background:#dc3545;
+     color:white;
+ }
+ textarea{
+     width:100%;
+     height:220px;
+     margin-top:15px;
+     padding:10px;
+     border-radius:12px;
+     box-sizing:border-box;
+     font-size:16px;
+ }
+ .scan-count{
+     margin-top:10px;
+     text-align:center;
+     font-size:18px;
+     font-weight:bold;
+ }
+ #warning{
+     margin-top:10px;
+     text-align:center;
+     font-size:20px;
+     color:red;
+     font-weight:bold;
+     display:none;
+ }
+ #status{
+     margin-top:10px;
+     text-align:center;
+     font-size:15px;
+     font-weight:bold;
+ }
+ .info{
+     text-align:center;
+     margin-top:10px;
+     color:#666;
+     font-size:14px;
+ }
+ </style>
+ </head>
+ <body>
+ <div class="container">
+ <h2>NGUYỄN MẠNH TUẤN QR SCAN</h2>
+ <input type="text" id="saleInput" placeholder="Nhập Sale">
+ <div id="reader-wrapper">
+     <div id="reader"></div>
+     <div id="focus-box"></div>
+     <!-- Bộ đếm QR hiển thị trên camera -->
+     <div id="scan-counter">0</div>
+     <!-- Thông báo trùng lặp hiển thị trên camera -->
+     <div id="overlay-warning">MÃ QR ĐÃ TỒN TẠI</div>
+ </div>
+ <div class="scan-count"> Tổng scan: <span id="count">0</span> </div>
+ <div id="status"></div>
+ <button class="start" onclick="startScanner()"> Start Scanner </button>
+ <button class="stop" onclick="stopScanner()"> Stop Scanner </button>
+ <button class="copy" onclick="copyList()"> Copy List </button>
+ <button class="clear" onclick="clearList()"> Clear List </button>
+ <textarea id="resultList" placeholder="DANH SÁCH MÃ QR ĐÃ SCAN"></textarea>
+ <div class="info"> Được viết bởi Nguyễn Mạnh Tuấn </div>
+ </div>
+ <script>
+ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz6Uwfr6KdbZs9hXfBV2gBb0cmHCCdgjicUAa14MRzhJDUY_MtKLPmA0QKm9BEYKXEw/exec";
+ let scannedList = [];
+ let scannerRunning = false;
+ let lastScanTime = 0;
+
+ async function startScanner(){
+     const sale = document.getElementById("saleInput").value.trim();
+     if(!sale){
+         alert("BẠN CHƯA NHẬP TÊN SALE");
+         return;
+     }
+     if(scannerRunning){
+         return;
+     }
+     try{
+         Quagga.init({
+             inputStream: {
+                 type: "LiveStream",
+                 constraints: {
+                     width: {ideal: 1920},
+                     height: {ideal: 1080},
+                     facingMode: "environment",
+                     advanced: [
+                         {focusMode: "continuous"},
+                         {zoom: 1.5}
+                     ]
+                 },
+                 area: {
+                     top: "34%",
+                     right: "5%",
+                     left: "5%",
+                     bottom: "34%"
+                 }
+             },
+             decoder: {
+                 readers: [
+                     "code_128_reader",
+                     "ean_reader",
+                     "ean_8_reader",
+                     "code_39_reader",
+                     "code_93_reader",
+                     "upc_reader",
+                     "upc_e_reader",
+                     "itf_reader",
+                     "msi_reader",
+                     "codabar_reader"
+                 ],
+                 debug: {
+                     showCanvas: false,
+                     showPatterns: false,
+                     showFrequency: false,
+                     showErrors: false
+                 }
+             },
+             locate: true,
+             frequency: 10,
+             numOfWorkers: 4
+         }, function(err) {
+             if (err) {
+                 console.error(err);
+                 alert("Lỗi camera:\n" + err);
+                 return;
+             }
+             Quagga.start();
+             scannerRunning = true;
+             document.getElementById("scan-counter").style.display = "block";
+             setupTapFocus();
+         });
+
+         Quagga.onDetected(async function(result) {
+             const now = Date.now();
+             if(now - lastScanTime < 1000){
+                 return;
+             }
+
+             const decodedText = result.codeResult.code;
+             
+             // ✅ KIỂM TRA XEM QR ĐÃ TỒN TẠI HAY CHƯA
+             if(scannedList.includes(decodedText)){
+                 showDuplicateWarning();
+                 navigator.vibrate?.([200,100,200]);
+                 return; // ❌ DỪNG HẸN - KHÔNG GỬI GOOGLE SHEET
+             }
+
+             lastScanTime = now;
+
+             // ✅ THÊM VÀO DANH SÁCH
+             scannedList.push(decodedText);
+             document.getElementById("resultList").value = scannedList.join("\n");
+             document.getElementById("count").innerText = scannedList.length;
+             document.getElementById("scan-counter").innerText = scannedList.length;
+             
+             navigator.vibrate?.(100);
+             flashEffect();
+
+             let scanType = "BARCODE";
+
+             // ✅ CHỈ GỬI GOOGLE SHEET KHI QR CHƯA TỒN TẠI
+             await autoSendToSheet(decodedText, scanType);
+         });
+
+     }catch(err){
+         console.error(err);
+         alert("Lỗi camera:\n" + err);
+     }
+ }
+
+ async function autoSendToSheet(code, type){
+     try{
+         const sale = document.getElementById("saleInput").value.trim();
+         if(!sale){
+             setStatus("Chưa nhập Sale");
+             return;
+         }
+         setStatus("Đang gửi: " + code);
+         const url = GOOGLE_SCRIPT_URL +
+             "?sale=" + encodeURIComponent(sale) +
+             "&code=" + encodeURIComponent(code) +
+             "&type=" + encodeURIComponent(type);
+         await fetch(url, {
+             method:"GET",
+             mode:"no-cors",
+             cache:"no-cache"
+         });
+         setStatus("Đã gửi: " + code);
+     }catch(err){
+         console.error(err);
+         setStatus("Lỗi gửi dữ liệu");
+     }
+ }
+
+ async function stopScanner(){
+     if(scannerRunning){
+         Quagga.stop();
+         scannerRunning = false;
+         document.getElementById("scan-counter").style.display = "none";
+     }
+ }
+
+ function copyList(){
+     navigator.clipboard.writeText(document.getElementById("resultList").value);
+     alert("Đã copy");
+ }
+
+ function clearList(){
+     scannedList = [];
+     document.getElementById("resultList").value = "";
+     document.getElementById("count").innerText = 0;
+     document.getElementById("scan-counter").innerText = 0;
+     setStatus("");
+ }
+
+ function setStatus(text){
+     document.getElementById("status").innerText = text;
+ }
+
+ function showDuplicateWarning(){
+     const overlayWarning = document.getElementById("overlay-warning");
+     overlayWarning.style.display = "block";
+     setTimeout(() => {
+         overlayWarning.style.display = "none";
+     }, 1500);
+ }
+
+ function flashEffect(){
+     document.body.style.opacity = "0.9";
+     setTimeout(() => {
+         document.body.style.opacity = "1";
+     }, 100);
+ }
+
+ function setupTapFocus(){
+     const wrapper = document.getElementById("reader-wrapper");
+     const focusBox = document.getElementById("focus-box");
+     wrapper.addEventListener("click", function(e){
+         const rect = wrapper.getBoundingClientRect();
+         const x = e.clientX - rect.left;
+         const y = e.clientY - rect.top;
+         focusBox.style.left = x + "px";
+         focusBox.style.top = y + "px";
+         focusBox.style.display = "block";
+         setTimeout(() => {
+             focusBox.style.display = "none";
+         }, 700);
+         navigator.vibrate?.(30);
+     });
+ }
+ </script>
+ </body>
 </html>
