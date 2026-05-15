@@ -1,201 +1,322 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>NGUYỄN MẠNH TUẤN QR SCAN</title>
 
-<!-- ZXING -->
-<script src="https://unpkg.com/@zxing/library@latest"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
 
 body{
-    margin:0;
-    padding:15px;
-    background:#f5f5f5;
     font-family:Arial,sans-serif;
+    background:
+        radial-gradient(circle at top left,#1e293b,#0f172a 60%);
+    min-height:100vh;
+    padding:18px;
+    color:white;
 }
 
 .container{
-    max-width:600px;
+    max-width:650px;
     margin:auto;
+    background:rgba(255,255,255,0.08);
+    backdrop-filter:blur(15px);
+    border:1px solid rgba(255,255,255,0.15);
+    border-radius:28px;
+    padding:22px;
+    box-shadow:
+        0 20px 40px rgba(0,0,0,0.45),
+        inset 0 1px 0 rgba(255,255,255,0.1);
 }
 
 h2{
     text-align:center;
+    font-size:28px;
+    margin-bottom:20px;
+    font-weight:900;
+    letter-spacing:1px;
+    color:#fff;
+    text-shadow:0 4px 15px rgba(0,0,0,0.4);
 }
 
-input{
+/* INPUT */
+.input-group{
+    position:relative;
+    margin-bottom:18px;
+}
+
+.input-group input{
     width:100%;
-    padding:14px;
-    margin-bottom:15px;
-    border-radius:12px;
-    border:1px solid #ccc;
-    box-sizing:border-box;
+    padding:16px 18px;
+    border:none;
+    border-radius:18px;
+    background:rgba(255,255,255,0.12);
+    color:white;
     font-size:16px;
+    outline:none;
+    box-shadow:
+        inset 3px 3px 8px rgba(0,0,0,0.3),
+        inset -2px -2px 5px rgba(255,255,255,0.08);
+    transition:0.25s;
 }
 
+.input-group input:focus{
+    transform:translateY(-1px);
+    box-shadow:
+        0 0 0 3px rgba(59,130,246,0.35),
+        inset 3px 3px 8px rgba(0,0,0,0.3);
+}
+
+.input-group input::placeholder{
+    color:#d1d5db;
+}
+
+/* CAMERA */
 #reader-wrapper{
     position:relative;
-    width:100%;
+    margin-top:10px;
 }
-
-/* VIDEO */
 
 #reader{
     width:100%;
-    height:360px;
+    min-height:360px;
+    overflow:hidden;
+    border-radius:24px;
+    border:2px solid rgba(255,255,255,0.1);
+    box-shadow:
+        0 12px 25px rgba(0,0,0,0.5),
+        inset 0 0 25px rgba(255,255,255,0.04);
     background:black;
-    border-radius:15px;
-    object-fit:cover;
 }
 
-/* KHUNG SCAN */
-
-#scan-area{
-    position:absolute;
-    top:50%;
-    left:50%;
-    width:88%;
-    height:32%;
-    border:4px solid yellow;
-    border-radius:18px;
-    transform:translate(-50%, -50%);
-    z-index:50;
-    pointer-events:none;
-    box-shadow:0 0 0 9999px rgba(0,0,0,0.35);
-}
-
-/* TAP FOCUS */
-
+/* focus */
 #focus-box{
     position:absolute;
-    width:100px;
-    height:100px;
-    border:3px solid #00ff00;
-    border-radius:12px;
+    width:110px;
+    height:110px;
+    border:3px solid #facc15;
+    border-radius:16px;
     display:none;
     transform:translate(-50%,-50%);
     pointer-events:none;
-    z-index:100;
+    box-shadow:
+        0 0 15px #facc15,
+        0 0 40px rgba(250,204,21,0.6);
 }
 
 /* COUNTER */
-
 #scan-counter{
     position:absolute;
-    top:20px;
-    right:20px;
-    background:rgba(255,0,0,0.85);
+    top:18px;
+    right:18px;
+    background:linear-gradient(145deg,#ef4444,#b91c1c);
     color:white;
-    padding:15px 25px;
-    border-radius:12px;
+    padding:14px 22px;
+    border-radius:18px;
     font-size:28px;
     font-weight:bold;
     display:none;
     pointer-events:none;
     z-index:100;
-    box-shadow:0 4px 15px rgba(0,0,0,0.5);
     min-width:80px;
     text-align:center;
+    box-shadow:
+        0 10px 20px rgba(0,0,0,0.5),
+        inset 0 2px 4px rgba(255,255,255,0.25);
 }
 
 /* WARNING */
-
 #overlay-warning{
     position:absolute;
     top:50%;
     left:50%;
-    transform:translate(-50%, -50%);
-    background:rgba(255,0,0,0.9);
+    transform:translate(-50%,-50%);
+    background:rgba(239,68,68,0.95);
     color:white;
-    padding:20px 30px;
-    border-radius:15px;
+    padding:22px 30px;
+    border-radius:20px;
     font-size:24px;
     font-weight:bold;
     display:none;
     pointer-events:none;
     z-index:100;
-    box-shadow:0 4px 15px rgba(0,0,0,0.5);
+    box-shadow:
+        0 15px 35px rgba(0,0,0,0.5);
     animation:pulse 0.5s ease-in-out;
+    text-align:center;
 }
 
 @keyframes pulse{
-
     0%,100%{
-        transform:translate(-50%, -50%) scale(1);
+        transform:translate(-50%,-50%) scale(1);
     }
-
     50%{
-        transform:translate(-50%, -50%) scale(1.1);
+        transform:translate(-50%,-50%) scale(1.08);
     }
+}
+
+/* INFO BOX */
+.top-info{
+    display:flex;
+    gap:12px;
+    margin-top:18px;
+}
+
+.card{
+    flex:1;
+    background:rgba(255,255,255,0.08);
+    border-radius:20px;
+    padding:16px;
+    text-align:center;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.1),
+        0 8px 20px rgba(0,0,0,0.25);
+}
+
+.card-title{
+    font-size:13px;
+    opacity:0.8;
+    margin-bottom:8px;
+}
+
+.card-value{
+    font-size:28px;
+    font-weight:900;
+}
+
+/* BUTTONS */
+.button-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-top:18px;
 }
 
 button{
-    width:100%;
-    padding:15px;
-    margin-top:10px;
     border:none;
-    border-radius:12px;
+    border-radius:20px;
+    padding:16px;
+    color:white;
     font-size:16px;
-    font-weight:bold;
+    font-weight:800;
     cursor:pointer;
+    transition:0.18s;
+    position:relative;
+    overflow:hidden;
+    box-shadow:
+        0 10px 20px rgba(0,0,0,0.35),
+        inset 0 2px 4px rgba(255,255,255,0.25);
+}
+
+button:active{
+    transform:translateY(4px);
+    box-shadow:
+        0 4px 10px rgba(0,0,0,0.35);
+}
+
+button:hover{
+    transform:translateY(-2px);
+}
+
+button::before{
+    content:"";
+    position:absolute;
+    top:0;
+    left:-100%;
+    width:100%;
+    height:100%;
+    background:linear-gradient(
+        120deg,
+        transparent,
+        rgba(255,255,255,0.35),
+        transparent
+    );
+    transition:0.5s;
+}
+
+button:hover::before{
+    left:100%;
 }
 
 .start{
-    background:#28a745;
-    color:white;
+    background:linear-gradient(145deg,#22c55e,#15803d);
 }
 
 .stop{
-    background:#ff9800;
-    color:white;
+    background:linear-gradient(145deg,#f59e0b,#d97706);
 }
 
 .copy{
-    background:#007bff;
-    color:white;
+    background:linear-gradient(145deg,#3b82f6,#1d4ed8);
 }
 
 .clear{
-    background:#dc3545;
-    color:white;
+    background:linear-gradient(145deg,#ef4444,#b91c1c);
 }
 
+/* TEXTAREA */
 textarea{
     width:100%;
     height:220px;
-    margin-top:15px;
-    padding:10px;
-    border-radius:12px;
-    box-sizing:border-box;
-    font-size:16px;
+    margin-top:20px;
+    padding:18px;
+    border:none;
+    border-radius:22px;
+    background:rgba(255,255,255,0.1);
+    color:white;
+    font-size:15px;
+    resize:none;
+    outline:none;
+    box-shadow:
+        inset 3px 3px 10px rgba(0,0,0,0.35),
+        inset -2px -2px 6px rgba(255,255,255,0.05);
 }
 
-.scan-count{
-    margin-top:10px;
-    text-align:center;
-    font-size:18px;
-    font-weight:bold;
+textarea::placeholder{
+    color:#d1d5db;
 }
 
+/* STATUS */
 #status{
-    margin-top:10px;
+    margin-top:16px;
     text-align:center;
     font-size:15px;
     font-weight:bold;
+    color:#93c5fd;
+    min-height:22px;
 }
 
+/* FOOTER */
 .info{
     text-align:center;
-    margin-top:10px;
-    color:#666;
+    margin-top:18px;
+    color:#cbd5e1;
     font-size:14px;
+    opacity:0.9;
 }
 
+@media(max-width:600px){
+
+    .button-grid{
+        grid-template-columns:1fr;
+    }
+
+    h2{
+        font-size:24px;
+    }
+
+    #overlay-warning{
+        font-size:20px;
+        width:90%;
+    }
+}
 </style>
 </head>
 
@@ -203,66 +324,72 @@ textarea{
 
 <div class="container">
 
-<h2>NGUYỄN MẠNH TUẤN QR SCAN</h2>
+    <h2>NGUYỄN MẠNH TUẤN QR SCAN</h2>
 
-<input type="text" id="saleInput" placeholder="Nhập Sale">
-
-<div id="reader-wrapper">
-
-    <!-- VIDEO -->
-    <video
-        id="reader"
-        autoplay
-        muted
-        playsinline
-    ></video>
-
-    <!-- SCAN AREA -->
-    <div id="scan-area"></div>
-
-    <!-- TAP FOCUS -->
-    <div id="focus-box"></div>
-
-    <!-- COUNTER -->
-    <div id="scan-counter">0</div>
-
-    <!-- WARNING -->
-    <div id="overlay-warning">
-        MÃ ĐÃ TỒN TẠI
+    <div class="input-group">
+        <input type="text" id="saleInput" placeholder="Nhập tên Sale">
     </div>
 
-</div>
+    <div id="reader-wrapper">
+        <div id="reader"></div>
 
-<div class="scan-count">
-    Tổng scan:
-    <span id="count">0</span>
-</div>
+        <div id="focus-box"></div>
 
-<div id="status"></div>
+        <div id="scan-counter">0</div>
 
-<button class="start" onclick="startScanner()">
-    Start Scanner
-</button>
+        <div id="overlay-warning">
+            MÃ QR ĐÃ TỒN TẠI
+        </div>
+    </div>
 
-<button class="stop" onclick="stopScanner()">
-    Stop Scanner
-</button>
+    <div class="top-info">
 
-<button class="copy" onclick="copyList()">
-    Copy List
-</button>
+        <div class="card">
+            <div class="card-title">TỔNG SCAN</div>
+            <div class="card-value" id="count">0</div>
+        </div>
 
-<button class="clear" onclick="clearList()">
-    Clear List
-</button>
+        <div class="card">
+            <div class="card-title">TRẠNG THÁI</div>
+            <div class="card-value" style="font-size:18px">
+                READY
+            </div>
+        </div>
 
-<textarea
-id="resultList"
-placeholder="DANH SÁCH MÃ ĐÃ SCAN"></textarea>
+    </div>
 
-<div class="info">
-    Được viết bởi Nguyễn Mạnh Tuấn
-</div>
+    <div id="status"></div>
+
+    <div class="button-grid">
+
+        <button class="start"
+        onclick="startScanner()">
+            ▶ START SCANNER
+        </button>
+
+        <button class="stop"
+        onclick="stopScanner()">
+            ⏹ STOP SCANNER
+        </button>
+
+        <button class="copy"
+        onclick="copyList()">
+            📋 COPY LIST
+        </button>
+
+        <button class="clear"
+        onclick="clearList()">
+            🗑 CLEAR LIST
+        </button>
+
+    </div>
+
+    <textarea id="resultList"
+    placeholder="DANH SÁCH MÃ QR ĐÃ SCAN"></textarea>
+
+    <div class="info">
+        Được viết bởi Nguyễn Mạnh Tuấn
+    </div>
 
 </div>
 
@@ -272,28 +399,18 @@ const GOOGLE_SCRIPT_URL =
 "https://script.google.com/macros/s/AKfycbz6Uwfr6KdbZs9hXfBV2gBb0cmHCCdgjicUAa14MRzhJDUY_MtKLPmA0QKm9BEYKXEw/exec";
 
 let scannedList = [];
-
+let html5QrCode = null;
 let scannerRunning = false;
-
 let lastScanTime = 0;
-
-let codeReader = null;
-
-let selectedDeviceId = null;
-
-/* START */
 
 async function startScanner(){
 
     const sale =
     document.getElementById("saleInput")
-    .value
-    .trim();
+    .value.trim();
 
     if(!sale){
-
         alert("BẠN CHƯA NHẬP TÊN SALE");
-
         return;
     }
 
@@ -303,107 +420,137 @@ async function startScanner(){
 
     try{
 
-        codeReader =
-        new ZXing.BrowserMultiFormatReader();
+        html5QrCode =
+        new Html5Qrcode("reader");
 
-        const videoInputDevices =
-        await codeReader.listVideoInputDevices();
+        await html5QrCode.start(
 
-        /* CAMERA SAU */
+            {
+                facingMode:{
+                    ideal:"environment"
+                }
+            },
 
-        if(videoInputDevices.length > 0){
+            {
+                fps:30,
 
-            selectedDeviceId =
-            videoInputDevices[
-                videoInputDevices.length - 1
-            ].deviceId;
-        }
+                qrbox:function(w,h){
+                    return{
+                        width:Math.floor(w * 0.9),
+                        height:Math.floor(h * 0.32)
+                    };
+                },
 
-        const videoElement =
-        document.getElementById("reader");
+                aspectRatio:1.777,
 
-        await codeReader.decodeFromVideoDevice(
+                disableFlip:false,
 
-            selectedDeviceId,
+                formatsToSupport:[
 
-            videoElement,
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.CODE_93,
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.ITF,
+                    Html5QrcodeSupportedFormats.MSI,
+                    Html5QrcodeSupportedFormats.CODABAR,
+                    Html5QrcodeSupportedFormats.GS1_DATABAR,
+                    Html5QrcodeSupportedFormats.GS1_DATABAR_EXPANDED,
+                    Html5QrcodeSupportedFormats.DATA_MATRIX,
+                    Html5QrcodeSupportedFormats.AZTEC,
+                    Html5QrcodeSupportedFormats.PDF_417
 
-            async(result, err)=>{
+                ],
 
-                if(result){
+                videoConstraints:{
 
-                    const now = Date.now();
+                    facingMode:{
+                        ideal:"environment"
+                    },
 
-                    if(now - lastScanTime < 1000){
-                        return;
-                    }
+                    width:{
+                        ideal:1920
+                    },
 
-                    lastScanTime = now;
+                    height:{
+                        ideal:1080
+                    },
 
-                    const code = result.text;
+                    advanced:[
+                        {
+                            focusMode:"continuous"
+                        },
+                        {
+                            zoom:1.5
+                        }
+                    ]
+                },
 
-                    if(!code){
-                        return;
-                    }
+                experimentalFeatures:{
+                    useBarCodeDetectorIfSupported:true
+                }
+            },
 
-                    /* CHECK DUPLICATE */
+            async function(decodedText,decodedResult){
 
-                    if(scannedList.includes(code)){
+                const now = Date.now();
 
-                        showDuplicateWarning();
-
-                        navigator.vibrate?.([200,100,200]);
-
-                        return;
-                    }
-
-                    /* ADD */
-
-                    scannedList.push(code);
-
-                    document.getElementById("resultList").value =
-                    scannedList.join("\n");
-
-                    document.getElementById("count").innerText =
-                    scannedList.length;
-
-                    document.getElementById("scan-counter").innerText =
-                    scannedList.length;
-
-                    navigator.vibrate?.(100);
-
-                    flashEffect();
-
-                    /* TYPE */
-
-                    let scanType = "BARCODE";
-
-                    if(
-                        result.getBarcodeFormat()
-                        .toString()
-                        .includes("QR_CODE")
-                    ){
-                        scanType = "QR";
-                    }
-
-                    await autoSendToSheet(
-                        code,
-                        scanType
-                    );
+                if(now - lastScanTime < 1000){
+                    return;
                 }
 
-            }
+                lastScanTime = now;
 
+                if(scannedList.includes(decodedText)){
+
+                    showDuplicateWarning();
+
+                    navigator.vibrate?.([200,100,200]);
+
+                    return;
+                }
+
+                scannedList.push(decodedText);
+
+                document.getElementById("resultList")
+                .value = scannedList.join("\n");
+
+                document.getElementById("count")
+                .innerText = scannedList.length;
+
+                document.getElementById("scan-counter")
+                .innerText = scannedList.length;
+
+                navigator.vibrate?.(100);
+
+                flashEffect();
+
+                let scanType = "BARCODE";
+
+                if(decodedResult.result.format
+                .formatName === "QR_CODE"){
+
+                    scanType = "QR";
+                }
+
+                await autoSendToSheet(
+                    decodedText,
+                    scanType
+                );
+            }
         );
 
         scannerRunning = true;
 
-        document.getElementById("scan-counter")
+        document.getElementById(
+        "scan-counter")
         .style.display = "block";
 
         setupTapFocus();
-
-        setStatus("Scanner đã khởi động");
 
     }catch(err){
 
@@ -413,40 +560,13 @@ async function startScanner(){
     }
 }
 
-/* STOP */
-
-async function stopScanner(){
-
-    try{
-
-        if(codeReader){
-
-            codeReader.reset();
-        }
-
-        scannerRunning = false;
-
-        document.getElementById("scan-counter")
-        .style.display = "none";
-
-        setStatus("Scanner đã dừng");
-
-    }catch(err){
-
-        console.error(err);
-    }
-}
-
-/* SEND SHEET */
-
-async function autoSendToSheet(code, type){
+async function autoSendToSheet(code,type){
 
     try{
 
         const sale =
         document.getElementById("saleInput")
-        .value
-        .trim();
+        .value.trim();
 
         if(!sale){
 
@@ -459,9 +579,12 @@ async function autoSendToSheet(code, type){
 
         const url =
         GOOGLE_SCRIPT_URL +
-        "?sale=" + encodeURIComponent(sale) +
-        "&code=" + encodeURIComponent(code) +
-        "&type=" + encodeURIComponent(type);
+        "?sale=" +
+        encodeURIComponent(sale) +
+        "&code=" +
+        encodeURIComponent(code) +
+        "&type=" +
+        encodeURIComponent(type);
 
         await fetch(url,{
             method:"GET",
@@ -479,103 +602,126 @@ async function autoSendToSheet(code, type){
     }
 }
 
-/* COPY */
+async function stopScanner(){
+
+    if(html5QrCode && scannerRunning){
+
+        await html5QrCode.stop();
+
+        await html5QrCode.clear();
+
+        scannerRunning = false;
+
+        document.getElementById(
+        "scan-counter")
+        .style.display = "none";
+    }
+}
 
 function copyList(){
 
     navigator.clipboard.writeText(
-        document.getElementById("resultList").value
+        document.getElementById(
+        "resultList").value
     );
 
     alert("Đã copy");
 }
 
-/* CLEAR */
-
 function clearList(){
 
     scannedList = [];
 
-    document.getElementById("resultList").value = "";
+    document.getElementById(
+    "resultList").value = "";
 
-    document.getElementById("count").innerText = 0;
+    document.getElementById(
+    "count").innerText = 0;
 
-    document.getElementById("scan-counter").innerText = 0;
+    document.getElementById(
+    "scan-counter").innerText = 0;
 
     setStatus("");
 }
 
-/* STATUS */
-
 function setStatus(text){
 
-    document.getElementById("status").innerText = text;
+    document.getElementById(
+    "status").innerText = text;
 }
-
-/* DUPLICATE */
 
 function showDuplicateWarning(){
 
     const overlayWarning =
-    document.getElementById("overlay-warning");
+    document.getElementById(
+    "overlay-warning");
 
-    overlayWarning.style.display = "block";
+    overlayWarning.style.display =
+    "block";
 
-    setTimeout(()=>{
+    setTimeout(() => {
 
-        overlayWarning.style.display = "none";
+        overlayWarning.style.display =
+        "none";
 
     },1500);
 }
 
-/* FLASH */
-
 function flashEffect(){
 
-    document.body.style.opacity = "0.9";
+    document.body.style.opacity =
+    "0.92";
 
-    setTimeout(()=>{
+    setTimeout(() => {
 
-        document.body.style.opacity = "1";
+        document.body.style.opacity =
+        "1";
 
     },100);
 }
 
-/* TAP FOCUS */
-
 function setupTapFocus(){
 
     const wrapper =
-    document.getElementById("reader-wrapper");
+    document.getElementById(
+    "reader-wrapper");
 
     const focusBox =
-    document.getElementById("focus-box");
+    document.getElementById(
+    "focus-box");
 
-    wrapper.addEventListener("click",function(e){
+    wrapper.addEventListener(
+    "click",
+
+    function(e){
 
         const rect =
         wrapper.getBoundingClientRect();
 
-        const x = e.clientX - rect.left;
+        const x =
+        e.clientX - rect.left;
 
-        const y = e.clientY - rect.top;
+        const y =
+        e.clientY - rect.top;
 
-        focusBox.style.left = x + "px";
+        focusBox.style.left =
+        x + "px";
 
-        focusBox.style.top = y + "px";
+        focusBox.style.top =
+        y + "px";
 
-        focusBox.style.display = "block";
+        focusBox.style.display =
+        "block";
 
-        setTimeout(()=>{
+        setTimeout(() => {
 
-            focusBox.style.display = "none";
+            focusBox.style.display =
+            "none";
 
         },700);
 
         navigator.vibrate?.(30);
-
     });
-
 }
 
 </script>
