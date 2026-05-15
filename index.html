@@ -40,22 +40,17 @@ input{
 
 #reader-wrapper{
     position:relative;
+    width:100%;
 }
+
+/* VIDEO */
 
 #reader{
     width:100%;
-    min-height:360px;
+    height:360px;
     background:black;
     border-radius:15px;
-    overflow:hidden;
-    position:relative;
-}
-
-#reader video{
-    width:100%;
-    height:100%;
     object-fit:cover;
-    border-radius:15px;
 }
 
 /* KHUNG SCAN */
@@ -129,9 +124,11 @@ input{
 }
 
 @keyframes pulse{
+
     0%,100%{
         transform:translate(-50%, -50%) scale(1);
     }
+
     50%{
         transform:translate(-50%, -50%) scale(1.1);
     }
@@ -212,14 +209,24 @@ textarea{
 
 <div id="reader-wrapper">
 
-    <div id="reader"></div>
+    <!-- VIDEO -->
+    <video
+        id="reader"
+        autoplay
+        muted
+        playsinline
+    ></video>
 
+    <!-- SCAN AREA -->
     <div id="scan-area"></div>
 
+    <!-- TAP FOCUS -->
     <div id="focus-box"></div>
 
+    <!-- COUNTER -->
     <div id="scan-counter">0</div>
 
+    <!-- WARNING -->
     <div id="overlay-warning">
         MÃ ĐÃ TỒN TẠI
     </div>
@@ -279,7 +286,9 @@ let selectedDeviceId = null;
 async function startScanner(){
 
     const sale =
-    document.getElementById("saleInput").value.trim();
+    document.getElementById("saleInput")
+    .value
+    .trim();
 
     if(!sale){
 
@@ -305,16 +314,21 @@ async function startScanner(){
         if(videoInputDevices.length > 0){
 
             selectedDeviceId =
-            videoInputDevices[videoInputDevices.length - 1].deviceId;
+            videoInputDevices[
+                videoInputDevices.length - 1
+            ].deviceId;
         }
+
+        const videoElement =
+        document.getElementById("reader");
 
         await codeReader.decodeFromVideoDevice(
 
             selectedDeviceId,
 
-            'reader',
+            videoElement,
 
-            async(result, err, controls)=>{
+            async(result, err)=>{
 
                 if(result){
 
@@ -365,14 +379,17 @@ async function startScanner(){
                     let scanType = "BARCODE";
 
                     if(
-                        result.getBarcodeFormat().toString()
+                        result.getBarcodeFormat()
+                        .toString()
                         .includes("QR_CODE")
                     ){
                         scanType = "QR";
                     }
 
-                    await autoSendToSheet(code, scanType);
-
+                    await autoSendToSheet(
+                        code,
+                        scanType
+                    );
                 }
 
             }
@@ -393,9 +410,7 @@ async function startScanner(){
         console.error(err);
 
         alert("Lỗi camera:\n" + err);
-
     }
-
 }
 
 /* STOP */
@@ -420,10 +435,9 @@ async function stopScanner(){
 
         console.error(err);
     }
-
 }
 
-/* SEND GOOGLE SHEET */
+/* SEND SHEET */
 
 async function autoSendToSheet(code, type){
 
@@ -431,7 +445,8 @@ async function autoSendToSheet(code, type){
 
         const sale =
         document.getElementById("saleInput")
-        .value.trim();
+        .value
+        .trim();
 
         if(!sale){
 
@@ -462,7 +477,6 @@ async function autoSendToSheet(code, type){
 
         setStatus("Lỗi gửi dữ liệu");
     }
-
 }
 
 /* COPY */
@@ -498,7 +512,7 @@ function setStatus(text){
     document.getElementById("status").innerText = text;
 }
 
-/* WARNING */
+/* DUPLICATE */
 
 function showDuplicateWarning(){
 
