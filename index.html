@@ -1,923 +1,793 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>NGUYỄN MẠNH TUẤN QR SCAN</title>
-
-<script src="https://unpkg.com/html5-qrcode"></script>
-
 <style>
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+:root{
+  --bg:#0b1220; --panel:#111a2e; --panel2:#18233b; --line:#25324d;
+  --text:#e8eefc; --muted:#93a3c2; --accent:#3b82f6; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
 }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;overscroll-behavior:none}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-action:manipulation}
+input{font:inherit}
 
-body{
-    font-family:Arial,sans-serif;
-    background:
-        radial-gradient(circle at top left,#1e293b,#0f172a 60%);
-    min-height:100vh;
-    padding:18px;
-    color:white;
+/* ============ MÀN HÌNH CHÍNH ============ */
+#home{min-height:100dvh;padding:calc(16px + var(--safe-t)) 16px calc(16px + var(--safe-b));
+  max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#06b6d4);
+  display:grid;place-items:center;font-weight:900;font-size:15px}
+.brand h1{font-size:17px;font-weight:800;letter-spacing:.3px}
+.brand small{display:block;color:var(--muted);font-size:12px;font-weight:500}
+.net{margin-left:auto;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.dot.off{background:var(--bad)} .dot.busy{background:var(--warn)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.field label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.field input{height:50px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--text);padding:0 14px;font-size:17px;outline:none}
+.field input:focus{border-color:var(--accent)}
+.field input:disabled{opacity:.6}
+
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;text-align:center}
+.stat b{display:block;font-size:26px;font-weight:900;line-height:1.1}
+.stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.stat.pending b{color:var(--warn)} .stat.dup b{color:var(--bad)} .stat.ok b{color:var(--ok)}
+
+.btn{height:56px;border-radius:14px;font-weight:800;font-size:17px;display:flex;align-items:center;
+  justify-content:center;gap:8px;width:100%}
+.btn.primary{background:var(--ok);color:#04220f}
+.btn.ghost{background:var(--panel2);border:1px solid var(--line);font-size:15px;height:48px}
+.btn.danger{color:#fca5a5}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.list{display:flex;flex-direction:column;gap:6px;max-height:42dvh;overflow:auto}
+.item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel2);border-radius:10px;font-size:15px}
+.item .stt{min-width:34px;font-weight:800;color:var(--muted);font-size:13px}
+.item .code{flex:1;font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+.item .st{font-size:12px;font-weight:700;white-space:nowrap}
+.st.ok{color:var(--ok)} .st.pending{color:var(--warn)} .st.dup{color:var(--bad)} .st.error{color:var(--bad)}
+.empty{color:var(--muted);text-align:center;padding:18px 0;font-size:14px}
+.foot{color:var(--muted);text-align:center;font-size:12px;margin-top:auto}
+.hint{font-size:13px;color:var(--muted);line-height:1.4}
+
+/* ============ MÀN HÌNH QUÉT (toàn màn hình) ============ */
+#scan{position:fixed;inset:0;background:#000;display:none;z-index:50;overflow:hidden;touch-action:none}
+#scan.on{display:block}
+#video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform-origin:50% 50%;will-change:transform}
+#mask{position:absolute;border-radius:16px;box-shadow:0 0 0 200vmax rgba(0,0,0,.55);pointer-events:none;
+  transition:width .2s,height .2s}
+#mask i{position:absolute;width:30px;height:30px;border:4px solid #fff;border-radius:4px}
+#mask i:nth-child(1){left:-3px;top:-3px;border-right:0;border-bottom:0;border-top-left-radius:16px}
+#mask i:nth-child(2){right:-3px;top:-3px;border-left:0;border-bottom:0;border-top-right-radius:16px}
+#mask i:nth-child(3){left:-3px;bottom:-3px;border-right:0;border-top:0;border-bottom-left-radius:16px}
+#mask i:nth-child(4){right:-3px;bottom:-3px;border-left:0;border-top:0;border-bottom-right-radius:16px}
+#mask .laser{position:absolute;left:6%;right:6%;height:2px;background:#ef4444;box-shadow:0 0 10px #ef4444;
+  top:50%;animation:laser 1.6s ease-in-out infinite alternate;opacity:.85}
+@keyframes laser{from{top:12%}to{top:88%}}
+#mask.ok{box-shadow:0 0 0 200vmax rgba(0,0,0,.55),inset 0 0 0 4px var(--ok)}
+#mask.dup{box-shadow:0 0 0 200vmax rgba(0,0,0,.55),inset 0 0 0 4px var(--bad)}
+
+.topbar{position:absolute;left:0;right:0;top:0;padding:calc(10px + var(--safe-t)) 12px 10px;
+  display:flex;align-items:center;gap:10px;background:linear-gradient(#000a,#0000)}
+.chip{background:rgba(15,23,42,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:8px 12px;font-size:14px;font-weight:700;
+  display:flex;align-items:center;gap:6px;max-width:46vw;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.counter{margin-left:auto;background:var(--bad);border-radius:14px;padding:6px 14px;font-size:28px;font-weight:900;
+  min-width:64px;text-align:center;box-shadow:0 6px 18px #0008}
+.iconbtn{width:46px;height:46px;border-radius:50%;background:rgba(15,23,42,.75);border:1px solid rgba(255,255,255,.15);
+  display:grid;place-items:center;font-size:20px;flex:0 0 auto}
+.iconbtn.active{background:#facc15;color:#000}
+
+#toast{position:absolute;left:50%;transform:translateX(-50%);padding:12px 18px;border-radius:14px;
+  font-weight:800;font-size:17px;text-align:center;display:none;max-width:92vw;box-shadow:0 10px 30px #000a;z-index:5}
+#toast.ok{background:var(--ok);color:#04220f;display:block}
+#toast.dup{background:var(--bad);color:#fff;display:block;font-size:20px}
+#toast.info{background:#1e293b;color:#fff;display:block}
+#toast small{display:block;font-size:13px;font-weight:600;opacity:.9;margin-top:2px}
+
+.bottombar{position:absolute;left:0;right:0;bottom:0;padding:10px 12px calc(14px + var(--safe-b));
+  background:linear-gradient(#0000,#000c);display:flex;flex-direction:column;gap:10px}
+.zoomrow{display:flex;align-items:center;gap:8px;justify-content:center}
+.zbtn{min-width:52px;height:38px;border-radius:999px;background:rgba(15,23,42,.75);border:1px solid rgba(255,255,255,.15);
+  font-weight:800;font-size:14px}
+.zbtn.sel{background:#fff;color:#000}
+#zoomSlider{width:100%;accent-color:#fff;height:28px}
+.ctrlrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.stopbtn{flex:1;height:54px;border-radius:16px;background:var(--warn);color:#2a1700;font-weight:900;font-size:18px}
+#focusRing{position:absolute;width:76px;height:76px;margin:-38px 0 0 -38px;border:2px solid #facc15;border-radius:50%;
+  pointer-events:none;display:none;animation:ring .6s ease-out}
+@keyframes ring{from{transform:scale(1.5);opacity:0}to{transform:scale(1);opacity:1}}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .15s}
+#loading{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-weight:700;background:#000}
+
+/* bảng danh sách khi đang quét */
+#sheet{position:absolute;left:0;right:0;bottom:0;max-height:70dvh;background:var(--panel);border-radius:18px 18px 0 0;
+  transform:translateY(100%);transition:transform .25s;z-index:10;padding:12px 12px calc(12px + var(--safe-b));
+  display:flex;flex-direction:column;gap:10px}
+#sheet.open{transform:none}
+#sheet .grab{width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto}
+
+@media (orientation:landscape){
+  .bottombar{flex-direction:row;align-items:center}
+  .zoomrow{flex:1}
+  #zoomSlider{display:none}
 }
-
-.container{
-    max-width:650px;
-    margin:auto;
-    background:rgba(255,255,255,0.08);
-    backdrop-filter:blur(15px);
-    border:1px solid rgba(255,255,255,0.15);
-    border-radius:28px;
-    padding:22px;
-    box-shadow:
-        0 20px 40px rgba(0,0,0,0.45),
-        inset 0 1px 0 rgba(255,255,255,0.1);
-}
-
-h2{
-    text-align:center;
-    font-size:28px;
-    margin-bottom:20px;
-    font-weight:900;
-    letter-spacing:1px;
-    color:#fff;
-    text-shadow:0 4px 15px rgba(0,0,0,0.4);
-}
-
-/* INPUT */
-
-.input-group{
-    margin-bottom:14px;
-}
-
-.input-group input{
-    width:100%;
-    padding:16px 18px;
-    border:none;
-    border-radius:18px;
-    background:rgba(255,255,255,0.12);
-    color:white;
-    font-size:16px;
-    outline:none;
-    transition:0.25s;
-
-    box-shadow:
-        inset 3px 3px 8px rgba(0,0,0,0.3),
-        inset -2px -2px 5px rgba(255,255,255,0.08);
-}
-
-.input-group input:focus{
-    transform:translateY(-1px);
-
-    box-shadow:
-        0 0 0 3px rgba(59,130,246,0.35),
-        inset 3px 3px 8px rgba(0,0,0,0.3);
-}
-
-.input-group input::placeholder{
-    color:#d1d5db;
-}
-
-/* CAMERA */
-
-#reader-wrapper{
-    position:relative;
-    margin-top:10px;
-}
-
-#reader{
-    width:100%;
-    min-height:360px;
-    overflow:hidden;
-    border-radius:24px;
-    border:2px solid rgba(255,255,255,0.1);
-
-    box-shadow:
-        0 12px 25px rgba(0,0,0,0.5),
-        inset 0 0 25px rgba(255,255,255,0.04);
-
-    background:black;
-}
-
-/* FOCUS */
-
-#focus-box{
-    position:absolute;
-    width:110px;
-    height:110px;
-    border:3px solid #facc15;
-    border-radius:16px;
-    display:none;
-    transform:translate(-50%,-50%);
-    pointer-events:none;
-
-    box-shadow:
-        0 0 15px #facc15,
-        0 0 40px rgba(250,204,21,0.6);
-}
-
-/* COUNTER */
-
-#scan-counter{
-    position:absolute;
-    top:18px;
-    right:18px;
-
-    background:
-        linear-gradient(145deg,#ef4444,#b91c1c);
-
-    color:white;
-
-    padding:14px 22px;
-
-    border-radius:18px;
-
-    font-size:28px;
-    font-weight:bold;
-
-    display:none;
-
-    pointer-events:none;
-
-    z-index:100;
-
-    min-width:80px;
-
-    text-align:center;
-
-    box-shadow:
-        0 10px 20px rgba(0,0,0,0.5),
-        inset 0 2px 4px rgba(255,255,255,0.25);
-}
-
-/* WARNING */
-
-#overlay-warning{
-    position:absolute;
-
-    top:50%;
-    left:50%;
-
-    transform:translate(-50%,-50%);
-
-    background:rgba(239,68,68,0.95);
-
-    color:white;
-
-    padding:22px 30px;
-
-    border-radius:20px;
-
-    font-size:24px;
-    font-weight:bold;
-
-    display:none;
-
-    pointer-events:none;
-
-    z-index:100;
-
-    box-shadow:
-        0 15px 35px rgba(0,0,0,0.5);
-
-    animation:pulse 0.5s ease-in-out;
-
-    text-align:center;
-}
-
-@keyframes pulse{
-
-    0%,100%{
-        transform:translate(-50%,-50%) scale(1);
-    }
-
-    50%{
-        transform:translate(-50%,-50%) scale(1.08);
-    }
-}
-
-/* INFO BOX */
-
-.top-info{
-    display:flex;
-    gap:12px;
-    margin-top:18px;
-}
-
-.card{
-    flex:1;
-
-    background:rgba(255,255,255,0.08);
-
-    border-radius:20px;
-
-    padding:16px;
-
-    text-align:center;
-
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.1),
-        0 8px 20px rgba(0,0,0,0.25);
-}
-
-.card-title{
-    font-size:13px;
-    opacity:0.8;
-    margin-bottom:8px;
-}
-
-.card-value{
-    font-size:28px;
-    font-weight:900;
-}
-
-/* BUTTONS */
-
-.button-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:14px;
-    margin-top:18px;
-}
-
-button{
-    border:none;
-    border-radius:20px;
-
-    padding:16px;
-
-    color:white;
-
-    font-size:16px;
-    font-weight:800;
-
-    cursor:pointer;
-
-    transition:0.18s;
-
-    position:relative;
-
-    overflow:hidden;
-
-    box-shadow:
-        0 10px 20px rgba(0,0,0,0.35),
-        inset 0 2px 4px rgba(255,255,255,0.25);
-}
-
-button:active{
-    transform:translateY(4px);
-
-    box-shadow:
-        0 4px 10px rgba(0,0,0,0.35);
-}
-
-button:hover{
-    transform:translateY(-2px);
-}
-
-button::before{
-
-    content:"";
-
-    position:absolute;
-
-    top:0;
-    left:-100%;
-
-    width:100%;
-    height:100%;
-
-    background:
-        linear-gradient(
-            120deg,
-            transparent,
-            rgba(255,255,255,0.35),
-            transparent
-        );
-
-    transition:0.5s;
-}
-
-button:hover::before{
-    left:100%;
-}
-
-.start{
-    background:
-        linear-gradient(145deg,#22c55e,#15803d);
-}
-
-.stop{
-    background:
-        linear-gradient(145deg,#f59e0b,#d97706);
-}
-
-.copy{
-    background:
-        linear-gradient(145deg,#3b82f6,#1d4ed8);
-}
-
-.clear{
-    background:
-        linear-gradient(145deg,#ef4444,#b91c1c);
-}
-
-/* TEXTAREA */
-
-textarea{
-    width:100%;
-    height:220px;
-
-    margin-top:20px;
-
-    padding:18px;
-
-    border:none;
-
-    border-radius:22px;
-
-    background:rgba(255,255,255,0.1);
-
-    color:white;
-
-    font-size:15px;
-
-    resize:none;
-
-    outline:none;
-
-    box-shadow:
-        inset 3px 3px 10px rgba(0,0,0,0.35),
-        inset -2px -2px 6px rgba(255,255,255,0.05);
-}
-
-textarea::placeholder{
-    color:#d1d5db;
-}
-
-/* STATUS */
-
-#status{
-    margin-top:16px;
-    text-align:center;
-    font-size:15px;
-    font-weight:bold;
-    color:#93c5fd;
-    min-height:22px;
-}
-
-/* FOOTER */
-
-.info{
-    text-align:center;
-    margin-top:18px;
-    color:#cbd5e1;
-    font-size:14px;
-    opacity:0.9;
-}
-
-/* MOBILE */
-
-@media(max-width:600px){
-
-    .button-grid{
-        grid-template-columns:1fr;
-    }
-
-    h2{
-        font-size:24px;
-    }
-
-    #overlay-warning{
-        font-size:20px;
-        width:90%;
-    }
-}
-
 </style>
 </head>
-
 <body>
 
-<div class="container">
+<!-- ======================= MÀN HÌNH CHÍNH ======================= -->
+<main id="home">
+  <div class="brand">
+    <div class="logo">QR</div>
+    <div><h1>QR SCAN</h1><small>Nguyễn Mạnh Tuấn</small></div>
+    <div class="net"><span class="dot" id="netDot"></span><span id="netText">Sẵn sàng</span></div>
+  </div>
 
-    <h2>NGUYỄN MẠNH TUẤN QR SCAN</h2>
-
-    <!-- SALE -->
-
-    <div class="input-group">
-        <input
-        type="text"
-        id="saleInput"
-        placeholder="Nhập Sale">
+  <section class="card">
+    <div class="field">
+      <label for="saleInput">Tên Sale</label>
+      <input id="saleInput" autocomplete="off" autocapitalize="characters" placeholder="Nhập tên Sale" enterkeyhint="next">
     </div>
-
-    <!-- SALE NHẬN -->
-
-    <div class="input-group">
-        <input
-        type="text"
-        id="receiverInput"
-        placeholder="Nhập Sale nhận (không bắt buộc)">
+    <div class="field">
+      <label for="receiverInput">Sale nhận (không bắt buộc)</label>
+      <input id="receiverInput" autocomplete="off" placeholder="Nhập Sale nhận" enterkeyhint="done">
     </div>
+    <p class="hint" id="sessionHint"></p>
+  </section>
 
-    <!-- CAMERA -->
+  <div class="stats">
+    <div class="stat ok"><b id="statOk">0</b><span>Đã ghi</span></div>
+    <div class="stat pending"><b id="statPending">0</b><span>Đang gửi</span></div>
+    <div class="stat dup"><b id="statDup">0</b><span>Trùng</span></div>
+  </div>
 
-    <div id="reader-wrapper">
+  <button class="btn primary" id="startBtn">▶ BẮT ĐẦU QUÉT</button>
 
-        <div id="reader"></div>
-
-        <div id="focus-box"></div>
-
-        <div id="scan-counter">0</div>
-
-        <div id="overlay-warning">
-            MÃ QR ĐÃ TỒN TẠI
-        </div>
-
+  <section class="card">
+    <div class="row2" style="margin-bottom:10px">
+      <button class="btn ghost" id="copyBtn">📋 Copy danh sách</button>
+      <button class="btn ghost danger" id="newBtn">↺ Phiên mới</button>
     </div>
+    <div class="list" id="homeList"></div>
+  </section>
 
-    <!-- INFO -->
+  <div class="foot">Được viết bởi Nguyễn Mạnh Tuấn · https://byvn.net/zbFQ</div>
+</main>
 
-    <div class="top-info">
+<!-- ======================= MÀN HÌNH QUÉT ======================= -->
+<section id="scan" aria-label="Camera">
+  <video id="video" playsinline muted autoplay></video>
+  <div id="mask"><i></i><i></i><i></i><i></i><div class="laser"></div></div>
+  <div id="focusRing"></div>
+  <div id="flash"></div>
+  <div id="toast"></div>
+  <div id="loading">Đang mở camera…</div>
 
-        <div class="card">
+  <div class="topbar">
+    <div class="chip" id="saleChip">—</div>
+    <span class="dot" id="netDot2"></span>
+    <div class="counter" id="counter">0</div>
+  </div>
 
-            <div class="card-title">
-                TỔNG SCAN
-            </div>
-
-            <div class="card-value"
-            id="count">
-                0
-            </div>
-
-        </div>
-
-        <div class="card">
-
-            <div class="card-title">
-                TRẠNG THÁI
-            </div>
-
-            <div class="card-value"
-            style="font-size:18px">
-                READY
-            </div>
-
-        </div>
-
+  <div class="bottombar">
+    <div class="zoomrow" id="zoomRow"></div>
+    <input type="range" id="zoomSlider" min="1" max="5" step="0.1" value="1" aria-label="Zoom">
+    <div class="ctrlrow">
+      <button class="iconbtn" id="torchBtn" title="Đèn">🔦</button>
+      <button class="iconbtn" id="shapeBtn" title="Khung quét">▭</button>
+      <button class="stopbtn" id="stopBtn">■ DỪNG</button>
+      <button class="iconbtn" id="camBtn" title="Đổi camera">🔄</button>
+      <button class="iconbtn" id="listBtn" title="Danh sách">☰</button>
     </div>
+  </div>
 
-    <div id="status"></div>
-
-    <!-- BUTTON -->
-
-    <div class="button-grid">
-
-        <button
-        class="start"
-        onclick="startScanner()">
-
-            ▶ START SCANNER
-
-        </button>
-
-        <button
-        class="stop"
-        onclick="stopScanner()">
-
-            ⏹ STOP SCANNER
-
-        </button>
-
-        <button
-        class="copy"
-        onclick="copyList()">
-
-            📋 COPY LIST
-
-        </button>
-
-        <button
-        class="clear"
-        onclick="clearList()">
-
-            🗑 CLEAR LIST
-
-        </button>
-
+  <div id="sheet">
+    <div class="grab"></div>
+    <div class="row2">
+      <button class="btn ghost" id="copyBtn2">📋 Copy</button>
+      <button class="btn ghost" id="closeSheet">Đóng</button>
     </div>
+    <div class="list" id="scanList"></div>
+  </div>
+</section>
 
-    <!-- RESULT -->
-
-    <textarea
-    id="resultList"
-    placeholder="DANH SÁCH MÃ QR ĐÃ SCAN"></textarea>
-
-    <div class="info">
-        Được viết bởi Nguyễn Mạnh Tuấn
-        https://byvn.net/zbFQ
-    </div>
-
-</div>
-
-<script>
-
+<script type="module">
+/* =====================================================================
+   CẤU HÌNH
+   ===================================================================== */
 const GOOGLE_SCRIPT_URL =
-"https://script.google.com/macros/s/AKfycbyolwYKBvvgSpYCh8EDv1pVNRHazj3DZ5NjRovQbU_QC-l_X9msrQzbO7Xdw3g7L5s1jA/exec";
+  "https://script.google.com/macros/s/AKfycbyolwYKBvvgSpYCh8EDv1pVNRHazj3DZ5NjRovQbU_QC-l_X9msrQzbO7Xdw3g7L5s1jA/exec";
+const ZXING_URL = "https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.6/dist/es/reader/index.js";
 
-let scannedList = [];
+const FORMATS = ["QRCode","MicroQRCode","Code128","Code39","Code93","EAN13","EAN8","UPCA","UPCE",
+                 "ITF","Codabar","DataBar","DataBarExp","DataMatrix","Aztec","PDF417"];
+const LINEAR_CONFIRM = 2;        // barcode 1D phải đọc giống nhau 2 lần mới nhận (tránh đọc sai khi mờ)
+const CONFIRM_WINDOW_MS = 900;
+const ROI_MAX = 1600;            // cạnh dài tối đa (px) của vùng ảnh đưa vào giải mã
+const STORE_KEY = "qrscan.v2";
 
-let html5QrCode = null;
+/* =====================================================================
+   TRẠNG THÁI + LƯU TRỮ (localStorage, không mất khi tải lại trang)
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+let state = load();
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+    if (s && s.items) return s;
+  }catch(e){}
+  return { session:null, sale:"", receiver:"", items:[] };
+}
+function save(){
+  // giữ tối đa 3000 dòng gần nhất (đã ghi xong); dòng đang chờ gửi luôn giữ
+  if (state.items.length > 3000){
+    const keep = state.items.filter(i => i.status === "pending");
+    const done = state.items.filter(i => i.status !== "pending").slice(-2500);
+    state.items = done.concat(keep).sort((a,b)=>a.ts-b.ts);
+  }
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+Math.random().toString(36).slice(2));
+const sessionItems = () => state.items.filter(i => i.session === state.session);
 
-let scannerRunning = false;
-
-let lastScanTime = 0;
-
-/* START */
-
-async function startScanner(){
-
-    const sale =
-    document.getElementById(
-    "saleInput").value.trim();
-
-    if(!sale){
-
-        alert("BẠN CHƯA NHẬP TÊN SALE");
-
-        return;
-    }
-
-    if(scannerRunning){
-        return;
-    }
-
-    try{
-
-        html5QrCode =
-        new Html5Qrcode("reader");
-
-        await html5QrCode.start(
-
-            {
-                facingMode:{
-                    ideal:"environment"
-                }
-            },
-
-            {
-
-                fps:30,
-
-                qrbox:function(w,h){
-
-                    return{
-
-                        width:
-                        Math.floor(w * 0.9),
-
-                        height:
-                        Math.floor(h * 0.32)
-                    };
-                },
-
-                aspectRatio:1.777,
-
-                disableFlip:false,
-
-                formatsToSupport:[
-
-                    Html5QrcodeSupportedFormats.QR_CODE,
-                    Html5QrcodeSupportedFormats.CODE_128,
-                    Html5QrcodeSupportedFormats.CODE_39,
-                    Html5QrcodeSupportedFormats.CODE_93,
-                    Html5QrcodeSupportedFormats.EAN_13,
-                    Html5QrcodeSupportedFormats.EAN_8,
-                    Html5QrcodeSupportedFormats.UPC_A,
-                    Html5QrcodeSupportedFormats.UPC_E,
-                    Html5QrcodeSupportedFormats.ITF,
-                    Html5QrcodeSupportedFormats.MSI,
-                    Html5QrcodeSupportedFormats.CODABAR,
-                    Html5QrcodeSupportedFormats.GS1_DATABAR,
-                    Html5QrcodeSupportedFormats.GS1_DATABAR_EXPANDED,
-                    Html5QrcodeSupportedFormats.DATA_MATRIX,
-                    Html5QrcodeSupportedFormats.AZTEC,
-                    Html5QrcodeSupportedFormats.PDF_417
-                ],
-
-                videoConstraints:{
-
-                    facingMode:{
-                        ideal:"environment"
-                    },
-
-                    width:{
-                        ideal:1920
-                    },
-
-                    height:{
-                        ideal:1080
-                    },
-
-                    advanced:[
-
-                        {
-                            focusMode:"continuous"
-                        },
-
-                        {
-                            zoom:1.5
-                        }
-                    ]
-                },
-
-                experimentalFeatures:{
-                    useBarCodeDetectorIfSupported:true
-                }
-            },
-
-            async function(decodedText,decodedResult){
-
-                const now = Date.now();
-
-                if(now - lastScanTime < 1000){
-                    return;
-                }
-
-                lastScanTime = now;
-
-                /* CHECK DUPLICATE */
-
-                if(scannedList.includes(decodedText)){
-
-                    showDuplicateWarning();
-
-                    navigator.vibrate?.([200,100,200]);
-
-                    return;
-                }
-
-                /* ADD LIST */
-
-                scannedList.push(decodedText);
-
-                document.getElementById(
-                "resultList").value =
-                scannedList.join("\n");
-
-                document.getElementById(
-                "count").innerText =
-                scannedList.length;
-
-                document.getElementById(
-                "scan-counter").innerText =
-                scannedList.length;
-
-                navigator.vibrate?.(100);
-
-                flashEffect();
-
-                let scanType = "BARCODE";
-
-                if(decodedResult.result
-                .format.formatName ===
-                "QR_CODE"){
-
-                    scanType = "QR";
-                }
-
-                /* SEND SHEET */
-
-                await autoSendToSheet(
-                    decodedText,
-                    scanType
-                );
-            }
-        );
-
-        scannerRunning = true;
-
-        document.getElementById(
-        "scan-counter")
-        .style.display = "block";
-
-        setupTapFocus();
-
-    }catch(err){
-
-        console.error(err);
-
-        alert("Lỗi camera:\n" + err);
-    }
+/** Phiên mới: bộ đếm & STT trên file bắt đầu lại từ 1 */
+function newSession(sale, receiver){
+  state.session = uid();
+  state.sale = sale;
+  state.receiver = receiver;
+  save();
 }
 
-/* SEND GOOGLE SHEET */
+/* =====================================================================
+   GIAO DIỆN MÀN HÌNH CHÍNH
+   ===================================================================== */
+$("saleInput").value = state.sale || "";
+$("receiverInput").value = state.receiver || "";
 
-async function autoSendToSheet(code,type){
+function statusLabel(i){
+  if (i.status === "ok") return `<span class="st ok">✓ STT ${i.stt ?? ""}</span>`;
+  if (i.status === "dup") return `<span class="st dup">⚠ Trùng${i.dupRow ? " · dòng "+i.dupRow : ""}</span>`;
+  if (i.status === "error") return `<span class="st error">✕ ${esc(i.msg||"Lỗi")}</span>`;
+  return `<span class="st pending">⏳ Đang gửi</span>`;
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
-    try{
+function render(){
+  const items = sessionItems();
+  const ok = items.filter(i=>i.status==="ok").length;
+  const pending = state.items.filter(i=>i.status==="pending").length;
+  const dup = items.filter(i=>i.status==="dup").length;
+  const counted = items.filter(i=>i.status==="ok"||i.status==="pending").length;
+  $("statOk").textContent = ok;
+  $("statPending").textContent = pending;
+  $("statDup").textContent = dup;
+  $("counter").textContent = counted;
+  $("saleChip").textContent = "👤 " + (state.sale || "—");
 
-        const sale =
-        document.getElementById(
-        "saleInput")
-        .value.trim();
+  $("sessionHint").textContent = state.session && state.sale
+    ? `Phiên hiện tại: ${state.sale} · ${counted} mã. Đổi tên Sale khác → bộ đếm và STT trên file bắt đầu lại từ 1.`
+    : "Nhập tên Sale rồi bấm Bắt đầu quét.";
 
-        const receiver =
-        document.getElementById(
-        "receiverInput")
-        .value.trim();
-
-        if(!sale){
-
-            setStatus("Chưa nhập Sale");
-
-            return;
-        }
-
-        setStatus("Đang gửi: " + code);
-
-        const url =
-        GOOGLE_SCRIPT_URL +
-
-        "?sale=" +
-        encodeURIComponent(sale) +
-
-        "&receiver=" +
-        encodeURIComponent(receiver) +
-
-        "&code=" +
-        encodeURIComponent(code) +
-
-        "&type=" +
-        encodeURIComponent(type);
-
-        await fetch(url,{
-
-            method:"GET",
-
-            mode:"no-cors",
-
-            cache:"no-cache"
-        });
-
-        setStatus("Đã gửi: " + code);
-
-    }catch(err){
-
-        console.error(err);
-
-        setStatus("Lỗi gửi dữ liệu");
-    }
+  const html = items.length
+    ? items.slice().reverse().map(i =>
+        `<div class="item"><span class="stt">${i.status==="ok" ? i.stt : i.status==="pending" ? "…" : "—"}</span><span class="code">${esc(i.code)}</span>${statusLabel(i)}</div>`).join("")
+    : `<div class="empty">Chưa có mã nào trong phiên này</div>`;
+  $("homeList").innerHTML = html;
+  $("scanList").innerHTML = html;
+  setNet();
 }
 
-/* STOP */
-
-async function stopScanner(){
-
-    if(html5QrCode && scannerRunning){
-
-        await html5QrCode.stop();
-
-        await html5QrCode.clear();
-
-        scannerRunning = false;
-
-        document.getElementById(
-        "scan-counter")
-        .style.display = "none";
-    }
+function setNet(text){
+  const pending = state.items.filter(i=>i.status==="pending").length;
+  const off = !navigator.onLine;
+  const cls = off ? "off" : (pending ? "busy" : "");
+  for (const d of [$("netDot"), $("netDot2")]) d.className = "dot " + cls;
+  $("netText").textContent = text || (off ? "Mất mạng – sẽ gửi lại" : pending ? `Đang gửi ${pending}` : "Đã đồng bộ");
 }
-
-/* COPY */
 
 function copyList(){
-
-    navigator.clipboard.writeText(
-
-        document.getElementById(
-        "resultList").value
-
-    );
-
-    alert("Đã copy");
+  const txt = sessionItems().filter(i=>i.status!=="dup").map(i=>i.code).join("\n");
+  const done = () => toast("info","Đã copy " + (txt ? txt.split("\n").length : 0) + " mã");
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(done, () => fallbackCopy(txt, done));
+  else fallbackCopy(txt, done);
+}
+function fallbackCopy(txt, done){
+  const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta);
+  ta.select(); try{ document.execCommand("copy"); }catch(e){} ta.remove(); done();
 }
 
-/* CLEAR */
+$("copyBtn").onclick = copyList;
+$("copyBtn2").onclick = copyList;
+$("newBtn").onclick = () => {
+  if (!confirm("Bắt đầu phiên mới? Bộ đếm và STT trên file sẽ bắt đầu lại từ 1.")) return;
+  newSession($("saleInput").value.trim(), $("receiverInput").value.trim());
+  render();
+};
+$("startBtn").onclick = startScanner;
+$("stopBtn").onclick = stopScanner;
+$("listBtn").onclick = () => $("sheet").classList.add("open");
+$("closeSheet").onclick = () => $("sheet").classList.remove("open");
+window.addEventListener("online", () => { setNet(); pump(); });
+window.addEventListener("offline", () => setNet());
 
-function clearList(){
+/* =====================================================================
+   GỬI LÊN GOOGLE SHEET – hàng đợi tuần tự, gửi lại an toàn
+   Server tự chặn trùng (LockService + kiểm tra cột SERIAL) và nhận diện
+   gửi lại bằng rid, nên dù mạng retry bao nhiêu lần file vẫn chỉ có 1 dòng.
+   ===================================================================== */
+let pumping = false;
+async function pump(){
+  if (pumping) return;
+  pumping = true;
+  try{
+    let backoff = 1000;
+    while (true){
+      const next = state.items.find(i => i.status === "pending");
+      if (!next) break;
+      if (!navigator.onLine){ setNet(); break; }
+      try{
+        const res = await sendOne(next);
+        backoff = 1000;
+        applyResult(next, res);
+      }catch(err){
+        next.tries = (next.tries||0) + 1;
+        save(); setNet("Lỗi mạng – thử lại…");
+        await sleep(backoff);
+        backoff = Math.min(backoff*2, 15000);
+      }
+    }
+  } finally { pumping = false; setNet(); }
+}
+async function sendOne(i){
+  const q = new URLSearchParams({ action:"add", sale:i.sale, receiver:i.receiver||"", code:i.code,
+    type:i.type, session:i.session, rid:i.rid });
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 20000);
+  try{
+    const r = await fetch(GOOGLE_SCRIPT_URL + "?" + q.toString(), { method:"GET", redirect:"follow", cache:"no-store", signal:ctrl.signal });
+    const txt = await r.text();
+    let j; try{ j = JSON.parse(txt); }catch(e){ throw new Error("Phản hồi lạ: " + txt.slice(0,80)); }
+    if (j.status === "BUSY") throw new Error("busy");
+    return j;
+  } finally { clearTimeout(t); }
+}
+function applyResult(i, j){
+  if (j.status === "OK"){
+    i.status = "ok"; i.stt = j.stt; i.row = j.row;
+  } else if (j.status === "DUPLICATE"){
+    i.status = "dup"; i.dupRow = j.row; i.dupSale = j.sale;
+    if (scanning) showDup(i.code, j);
+    beep("dup");
+  } else {
+    i.status = "error"; i.msg = j.message || "Lỗi";
+  }
+  save(); render();
+}
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+pump();
 
-    scannedList = [];
-
-    document.getElementById(
-    "resultList").value = "";
-
-    document.getElementById(
-    "count").innerText = 0;
-
-    document.getElementById(
-    "scan-counter").innerText = 0;
-
-    setStatus("");
+/* =====================================================================
+   PHẢN HỒI: rung, tiếng bíp, toast
+   ===================================================================== */
+let audio;
+function beep(kind){
+  try{
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const tones = kind === "dup" ? [[330,.12],[0,.06],[330,.18]] : [[1650,.08]];
+    let t = audio.currentTime;
+    for (const [f,d] of tones){
+      if (f){
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.frequency.value = f; o.type = "square"; g.gain.value = .08;
+        o.connect(g).connect(audio.destination); o.start(t); o.stop(t+d);
+      }
+      t += d;
+    }
+  }catch(e){}
+  navigator.vibrate?.(kind === "dup" ? [200,100,200] : 80);
+}
+let toastTimer;
+function toast(kind, html, ms=1400){
+  const el = $("toast");
+  el.className = kind; el.innerHTML = html;
+  positionToast();
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ""; }, ms);
+}
+function positionToast(){
+  const m = $("mask").getBoundingClientRect();
+  $("toast").style.top = Math.min(m.bottom + 14, innerHeight - 220) + "px";
+}
+function frameFlash(kind){
+  const m = $("mask"); m.classList.remove("ok","dup"); void m.offsetWidth; m.classList.add(kind);
+  setTimeout(() => m.classList.remove(kind), 600);
+  if (kind === "ok"){ $("flash").style.opacity = .25; setTimeout(()=>$("flash").style.opacity = 0, 90); }
+}
+let lastDupAt = 0;
+function showDup(code, info){
+  const now = Date.now();
+  if (now - lastDupAt < 1200) return;      // không báo dồn dập khi camera vẫn chĩa vào mã
+  lastDupAt = now;
+  frameFlash("dup");
+  const extra = info && info.row ? `<small>Đã có trên file · dòng ${info.row}${info.sale ? " · " + esc(info.sale) : ""}</small>`
+                                 : `<small>Đã quét trong phiên này</small>`;
+  toast("dup", `⚠ MÃ ĐÃ TỒN TẠI<br>${esc(code)}${extra}`, 1800);
 }
 
-/* STATUS */
+/* =====================================================================
+   CAMERA + ZOOM
+   ===================================================================== */
+const video = $("video");
+let stream = null, track = null, caps = {}, scanning = false;
+let hwZoom = false, zoom = 1, zoomMin = 1, zoomMax = 5;
+let torchOn = false, deviceIdx = -1, backCams = [];
+let shape = localStorage.getItem("qrscan.shape") || "wide";   // wide = barcode dài, square = QR
+let wakeLock = null;
 
-function setStatus(text){
+async function startScanner(){
+  const sale = $("saleInput").value.trim();
+  const receiver = $("receiverInput").value.trim();
+  if (!sale){ alert("BẠN CHƯA NHẬP TÊN SALE"); $("saleInput").focus(); return; }
+  if (scanning) return;
 
-    document.getElementById(
-    "status").innerText = text;
+  // Đổi tên sale -> phiên mới -> bộ đếm + STT về 1
+  if (!state.session || sale !== state.sale) newSession(sale, receiver);
+  else { state.receiver = receiver; save(); }
+
+  scanning = true;                       // chặn bấm Start 2 lần
+  try{ audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume?.(); }catch(e){}
+  $("scan").classList.add("on");
+  $("loading").style.display = "grid";
+  render();
+  layoutMask();
+  // không chờ – không bao giờ để fullscreen/giữ màn hình sáng chặn việc mở camera
+  try{ document.documentElement.requestFullscreen?.({ navigationUI:"hide" })?.catch?.(()=>{}); }catch(e){}
+  try{ navigator.wakeLock?.request("screen").then(l => wakeLock = l, ()=>{}); }catch(e){}
+
+  try{
+    await Promise.all([openCamera(), loadDecoder()]);
+    $("loading").style.display = "none";
+    loop();
+  }catch(err){
+    console.error(err);
+    alert("Không mở được camera:\n" + (err && err.message || err));
+    await stopScanner();
+  }
 }
 
-/* DUPLICATE */
+async function openCamera(deviceId){
+  closeCamera();
+  const base = { width:{ ideal:1920 }, height:{ ideal:1080 }, frameRate:{ ideal:30 } };
+  const constraints = { audio:false, video: deviceId ? { ...base, deviceId:{ exact:deviceId } }
+                                                     : { ...base, facingMode:{ ideal:"environment" } } };
+  stream = await navigator.mediaDevices.getUserMedia(constraints);
+  track = stream.getVideoTracks()[0];
+  video.srcObject = stream;
+  video.play().catch(()=>{});
+  await new Promise((r, j) => {
+    if (video.readyState >= 2 && video.videoWidth) return r();
+    const t = setTimeout(() => video.videoWidth ? r() : j(new Error("Camera không trả hình")), 8000);
+    video.addEventListener("loadeddata", () => { clearTimeout(t); r(); }, { once:true });
+  });
 
-function showDuplicateWarning(){
+  caps = track.getCapabilities ? track.getCapabilities() : {};
+  // lấy nét liên tục + phơi sáng tự động nếu máy hỗ trợ
+  const adv = [];
+  if (caps.focusMode?.includes("continuous")) adv.push({ focusMode:"continuous" });
+  if (caps.exposureMode?.includes("continuous")) adv.push({ exposureMode:"continuous" });
+  if (caps.whiteBalanceMode?.includes("continuous")) adv.push({ whiteBalanceMode:"continuous" });
+  for (const a of adv){ try{ await track.applyConstraints({ advanced:[a] }); }catch(e){} }
 
-    const overlayWarning =
-    document.getElementById(
-    "overlay-warning");
+  // Zoom phần cứng (Android Chrome) – ảnh được zoom bằng cảm biến, khung quét giữ nguyên kích thước.
+  // Không có (iPhone/Safari) -> zoom số: phóng video bằng CSS + cắt vùng ảnh độ phân giải gốc tương ứng.
+  hwZoom = !!(caps.zoom && caps.zoom.max > caps.zoom.min);
+  zoomMin = hwZoom ? Math.max(1, caps.zoom.min) : 1;
+  zoomMax = hwZoom ? Math.min(caps.zoom.max, 10) : 4;
+  $("torchBtn").style.visibility = caps.torch ? "visible" : "hidden";
+  torchOn = false; $("torchBtn").classList.remove("active");
+  buildZoomUI();
+  await setZoom(Math.min(Math.max(zoom, zoomMin), zoomMax));
 
-    overlayWarning.style.display =
-    "block";
-
-    setTimeout(() => {
-
-        overlayWarning.style.display =
-        "none";
-
-    },1500);
+  // danh sách camera sau (để đổi ống kính trên máy nhiều camera)
+  try{
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    backCams = devs.filter(d => d.kind === "videoinput" && !/front|trước|user|facetime/i.test(d.label));
+    if (!backCams.length) backCams = devs.filter(d => d.kind === "videoinput");
+    const cur = track.getSettings().deviceId;
+    deviceIdx = backCams.findIndex(d => d.deviceId === cur);
+  }catch(e){ backCams = []; }
+  $("camBtn").style.visibility = backCams.length > 1 ? "visible" : "hidden";
 }
 
-/* FLASH */
-
-function flashEffect(){
-
-    document.body.style.opacity =
-    "0.92";
-
-    setTimeout(() => {
-
-        document.body.style.opacity =
-        "1";
-
-    },100);
+function closeCamera(){
+  if (stream){ stream.getTracks().forEach(t => t.stop()); }
+  stream = null; track = null;
 }
 
-/* TAP FOCUS */
-
-function setupTapFocus(){
-
-    const wrapper =
-    document.getElementById(
-    "reader-wrapper");
-
-    const focusBox =
-    document.getElementById(
-    "focus-box");
-
-    wrapper.addEventListener(
-
-        "click",
-
-        function(e){
-
-            const rect =
-            wrapper.getBoundingClientRect();
-
-            const x =
-            e.clientX - rect.left;
-
-            const y =
-            e.clientY - rect.top;
-
-            focusBox.style.left =
-            x + "px";
-
-            focusBox.style.top =
-            y + "px";
-
-            focusBox.style.display =
-            "block";
-
-            setTimeout(() => {
-
-                focusBox.style.display =
-                "none";
-
-            },700);
-
-            navigator.vibrate?.(30);
-        }
-    );
+async function stopScanner(){
+  scanning = false;
+  closeCamera();
+  video.srcObject = null;
+  $("scan").classList.remove("on");
+  $("sheet").classList.remove("open");
+  try{ if (document.fullscreenElement) await document.exitFullscreen(); }catch(e){}
+  try{ await wakeLock?.release(); }catch(e){} wakeLock = null;
+  render();
 }
 
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState === "visible" && scanning){
+    try{ wakeLock = await navigator.wakeLock?.request("screen"); }catch(e){}
+    if (!track || track.readyState === "ended"){ try{ await openCamera(backCams[deviceIdx]?.deviceId); }catch(e){} }
+  }
+});
+
+/* ---------- zoom ---------- */
+function buildZoomUI(){
+  const presets = [1, 1.5, 2, 3, 4].filter(z => z >= zoomMin - 0.01 && z <= zoomMax + 0.01);
+  $("zoomRow").innerHTML = presets.map(z => `<button class="zbtn" data-z="${z}">${z}×</button>`).join("");
+  $("zoomRow").querySelectorAll(".zbtn").forEach(b => b.onclick = () => setZoom(+b.dataset.z));
+  const s = $("zoomSlider");
+  s.min = zoomMin; s.max = zoomMax; s.step = 0.1;
+}
+let zoomApplying = null;
+async function setZoom(z){
+  zoom = Math.min(Math.max(z, zoomMin), zoomMax);
+  $("zoomSlider").value = zoom;
+  $("zoomRow").querySelectorAll(".zbtn").forEach(b => b.classList.toggle("sel", Math.abs(+b.dataset.z - zoom) < 0.05));
+  if (hwZoom && track){
+    video.style.transform = "";
+    const target = zoom;
+    if (zoomApplying) return;                 // gom các lần kéo slider liên tiếp
+    zoomApplying = (async () => {
+      try{ await track.applyConstraints({ advanced:[{ zoom: target }] }); }catch(e){}
+      zoomApplying = null;
+      if (zoom !== target) setZoom(zoom);
+    })();
+  } else {
+    video.style.transform = zoom > 1 ? `scale(${zoom})` : "";
+  }
+}
+$("zoomSlider").oninput = (e) => setZoom(+e.target.value);
+
+// chụm 2 ngón để zoom
+let pinch = null;
+$("scan").addEventListener("touchstart", (e) => {
+  if (e.touches.length === 2) pinch = { d: dist(e.touches), z: zoom };
+}, { passive:true });
+$("scan").addEventListener("touchmove", (e) => {
+  if (pinch && e.touches.length === 2) setZoom(pinch.z * dist(e.touches) / pinch.d);
+}, { passive:true });
+$("scan").addEventListener("touchend", (e) => { if (e.touches.length < 2) pinch = null; });
+const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+
+/* ---------- chạm để lấy nét ---------- */
+$("video").addEventListener("click", async (e) => {
+  const ring = $("focusRing");
+  ring.style.left = e.clientX + "px"; ring.style.top = e.clientY + "px";
+  ring.style.display = "none"; void ring.offsetWidth; ring.style.display = "block";
+  setTimeout(() => ring.style.display = "none", 900);
+  navigator.vibrate?.(20);
+  if (!track) return;
+  const p = screenToSource(e.clientX, e.clientY);
+  const vw = video.videoWidth, vh = video.videoHeight;
+  try{
+    const a = {};
+    if (caps.pointsOfInterest || "pointsOfInterest" in (track.getSettings?.()||{}))
+      a.pointsOfInterest = [{ x: Math.min(Math.max(p.x/vw,0),1), y: Math.min(Math.max(p.y/vh,0),1) }];
+    if (caps.focusMode?.includes("single-shot")) a.focusMode = "single-shot";
+    if (Object.keys(a).length){
+      await track.applyConstraints({ advanced:[a] });
+      if (a.focusMode) setTimeout(() => track?.applyConstraints({ advanced:[{ focusMode:"continuous" }] }).catch(()=>{}), 1500);
+    }
+  }catch(e){}
+});
+
+/* ---------- đèn, đổi camera, khung ---------- */
+$("torchBtn").onclick = async () => {
+  if (!track || !caps.torch) return;
+  torchOn = !torchOn;
+  try{ await track.applyConstraints({ advanced:[{ torch: torchOn }] }); }catch(e){ torchOn = false; }
+  $("torchBtn").classList.toggle("active", torchOn);
+};
+$("camBtn").onclick = async () => {
+  if (backCams.length < 2) return;
+  deviceIdx = (deviceIdx + 1) % backCams.length;
+  const label = backCams[deviceIdx].label || ("Camera " + (deviceIdx+1));
+  try{ await openCamera(backCams[deviceIdx].deviceId); toast("info", esc(label), 1200); }
+  catch(e){ toast("info", "Không mở được " + esc(label)); }
+};
+$("shapeBtn").onclick = () => {
+  shape = shape === "wide" ? "square" : "wide";
+  localStorage.setItem("qrscan.shape", shape);
+  layoutMask();
+};
+function layoutMask(){
+  const W = innerWidth, H = innerHeight;
+  const landscape = W > H;
+  let w = Math.min(W * (landscape ? 0.6 : 0.88), 640);
+  let h = shape === "wide" ? w * 0.45 : w * 0.8;
+  h = Math.min(h, H * (landscape ? 0.55 : 0.42));
+  if (shape === "square") w = Math.min(w, h / 0.8);
+  const m = $("mask");
+  m.style.width = w + "px"; m.style.height = h + "px";
+  m.style.left = (W - w)/2 + "px";
+  m.style.top = (H * (landscape ? 0.45 : 0.42) - h/2) + "px";
+  $("shapeBtn").textContent = shape === "wide" ? "▭" : "▢";
+  positionToast();
+}
+addEventListener("resize", layoutMask);
+addEventListener("orientationchange", () => setTimeout(layoutMask, 300));
+
+/* ---------- toạ độ màn hình -> pixel ảnh gốc ---------- */
+function videoGeom(){
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const W = video.clientWidth, H = video.clientHeight;
+  const cssZoom = hwZoom ? 1 : zoom;
+  const s = Math.max(W / vw, H / vh) * cssZoom;          // object-fit: cover + zoom số
+  return { vw, vh, s, ox: (W - vw * s) / 2, oy: (H - vh * s) / 2 };
+}
+function screenToSource(x, y){
+  const g = videoGeom();
+  return { x: (x - g.ox) / g.s, y: (y - g.oy) / g.s };
+}
+
+/* =====================================================================
+   GIẢI MÃ
+   - Android Chrome: BarcodeDetector gốc (ML Kit, rất tốt với ảnh mờ) xen kẽ ZXing.
+   - iPhone/Safari: ZXing-C++ (WebAssembly) – mạnh hơn nhiều so với html5-qrcode.
+   - Mỗi khung hình: cắt đúng vùng trong khung quét (+ viền 10%) ở độ phân giải gốc,
+     luân phiên bộ nhị phân hoá / khử nhiễu để đọc được ảnh mờ, tương phản thấp.
+   - Barcode 1D: phải đọc trùng 2 lần mới nhận để tránh đọc sai khi ảnh nhoè.
+   ===================================================================== */
+let zx = null, native = null;
+async function loadDecoder(){
+  if (!zx){
+    zx = await import(ZXING_URL);
+    await zx.prepareZXingModule({ fireImmediately:true });
+  }
+  if (!native && "BarcodeDetector" in window){
+    try{
+      const want = ["qr_code","code_128","code_39","code_93","ean_13","ean_8","upc_a","upc_e","itf","codabar","data_matrix","aztec","pdf417"];
+      const sup = await BarcodeDetector.getSupportedFormats();
+      const f = want.filter(x => sup.includes(x));
+      if (f.length) native = new BarcodeDetector({ formats:f });
+    }catch(e){ native = null; }
+  }
+}
+
+const canvas = document.createElement("canvas");
+const ctx = canvas.getContext("2d", { willReadFrequently:true });
+let frameNo = 0, busy = false, pauseUntil = 0;
+const candidates = new Map();   // text -> {n, t}
+
+function loop(){
+  if (!scanning) return;
+  const next = () => scanning && setTimeout(loop, 30);
+  if (busy || Date.now() < pauseUntil || !video.videoWidth){ next(); return; }
+  busy = true;
+  const t0 = performance.now();
+  decodeFrame().catch(e => { dbg.err = String(e && e.message || e); console.warn(e); })
+    .finally(() => { dbg.frames++; dbg.ms = Math.round(performance.now() - t0); busy = false; showDbg(); next(); });
+}
+/* chẩn đoán: mở trang với ?debug=1 */
+const DEBUG = /[?&]debug=1/.test(location.search);
+const dbg = { frames:0, reads:0, ms:0, err:"", roi:"", last:"" };
+let dbgEl = null;
+function showDbg(){
+  if (!DEBUG) return;
+  if (!dbgEl){ dbgEl = document.createElement("pre");
+    dbgEl.style.cssText = "position:absolute;left:8px;top:70px;z-index:9;font:11px monospace;color:#0f0;background:#000a;padding:6px;border-radius:6px;pointer-events:none";
+    $("scan").appendChild(dbgEl); }
+  dbgEl.textContent = `frames ${dbg.frames} reads ${dbg.reads} ${dbg.ms}ms\nroi ${dbg.roi}\nnative ${!!native} hwZoom ${hwZoom} z ${zoom.toFixed(1)}\nlast ${dbg.last}\nerr ${dbg.err}`;
+}
+
+async function decodeFrame(){
+  const g = videoGeom();
+  const m = $("mask").getBoundingClientRect();
+  const v = video.getBoundingClientRect();
+  // vùng khung quét (toạ độ trong video element), nới thêm 10% mỗi phía
+  // Khung dài (barcode): lấy hết bề ngang màn hình để mã dài hơn khung vẫn đủ vùng trắng 2 đầu.
+  const padX = shape === "wide" ? v.width : m.width * 0.10, padY = m.height * 0.25;
+  let x0 = (m.left - v.left - padX - g.ox) / g.s, y0 = (m.top - v.top - padY - g.oy) / g.s;
+  let x1 = (m.right - v.left + padX - g.ox) / g.s, y1 = (m.bottom - v.top + padY - g.oy) / g.s;
+  // chỉ lấy phần đang hiển thị trên màn hình
+  x0 = Math.max(x0, -g.ox / g.s); x1 = Math.min(x1, (v.width - g.ox) / g.s);
+  x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(g.vw, x1); y1 = Math.min(g.vh, y1);
+  const sw = x1 - x0, sh = y1 - y0;
+  if (sw < 16 || sh < 16) return;
+
+  const k = Math.min(1, ROI_MAX / Math.max(sw, sh));
+  const cw = Math.round(sw * k), ch = Math.round(sh * k);
+  if (canvas.width !== cw || canvas.height !== ch){ canvas.width = cw; canvas.height = ch; }
+  ctx.drawImage(video, x0, y0, sw, sh, 0, 0, cw, ch);
+  if (DEBUG) dbg.roi = `${Math.round(x0)},${Math.round(y0)} ${cw}x${ch} of ${g.vw}x${g.vh}`;
+
+  frameNo++;
+  let hits = [];
+
+  // 1) BarcodeDetector gốc (nếu có) – nhanh, chịu mờ tốt
+  if (native && frameNo % 2 === 1){
+    try{
+      const r = await native.detect(canvas);
+      hits = r.map(b => ({ text:b.rawValue, format:b.format, linear: !/qr|matrix|aztec|pdf/.test(b.format) }));
+    }catch(e){}
+  }
+  // 2) ZXing – luân phiên chiến lược cho ảnh khó
+  if (!hits.length && zx){
+    const img = ctx.getImageData(0, 0, cw, ch);
+    const mode = frameNo % 3;
+    const opts = {
+      formats: FORMATS, maxNumberOfSymbols: 1,
+      tryHarder: true, tryRotate: true, tryDownscale: true,
+      tryInvert: mode === 2,
+      tryDenoise: mode === 1,
+      binarizer: mode === 1 ? "GlobalHistogram" : "LocalAverage",
+    };
+    try{
+      const r = await zx.readBarcodes(img, opts);
+      hits = r.filter(b => b.isValid && b.text).map(b => ({
+        text: b.text, format: b.format,
+        linear: !/QR|Matrix|Aztec|PDF/i.test(b.format) }));
+    }catch(e){ dbg.err = "zx " + (e && e.message || e); }
+  }
+  if (hits.length){ dbg.reads++; dbg.last = hits[0].format + " " + hits[0].text; }
+  for (const h of hits) onDetected(h);
+}
+
+function onDetected(h){
+  const code = String(h.text).trim();
+  if (!code) return;
+  const now = Date.now();
+
+  // xác nhận 2 lần cho barcode 1D
+  if (h.linear && LINEAR_CONFIRM > 1){
+    const c = candidates.get(code);
+    if (!c || now - c.t > CONFIRM_WINDOW_MS){ candidates.set(code, { n:1, t:now }); return; }
+    c.n++; c.t = now;
+    if (c.n < LINEAR_CONFIRM) return;
+  }
+  candidates.clear();
+  accept(code, h.linear ? "BARCODE" : "QR");
+}
+
+function accept(code, type){
+  // trùng trong phiên (kể cả đang chờ gửi) -> chỉ báo, không gửi
+  const mine = sessionItems().find(i => i.code === code);
+  if (mine){
+    showDup(code, mine.status === "dup" ? { row:mine.dupRow, sale:mine.dupSale } : (mine.row ? { row:mine.row, sale:mine.sale } : null));
+    if (Date.now() - lastDupAt < 50) beep("dup");
+    pauseUntil = Date.now() + 400;
+    return;
+  }
+  const item = { rid: uid(), session: state.session, sale: state.sale, receiver: state.receiver,
+                 code, type, ts: Date.now(), status: "pending" };
+  state.items.push(item);
+  save();
+  beep("ok"); frameFlash("ok");
+  const n = sessionItems().filter(i => i.status==="ok"||i.status==="pending").length;
+  toast("ok", `✓ ${esc(code)}<small>${type} · #${n}</small>`, 1100);
+  pauseUntil = Date.now() + 700;   // nghỉ ngắn để người dùng chuyển sang mã kế tiếp
+  render();
+  pump();
+}
+
+render();
 </script>
-
 </body>
 </html>
